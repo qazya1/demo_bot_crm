@@ -1,0 +1,21 @@
+{
+  "uuid": "demo-lead-12345",
+  "state": "IN_PROGRESS",
+  "status": "underwriting",
+  "detailedStatus": "documents-requested",
+  "productInfo": [
+    {
+      "productCode": "LP_LOAN_BUS",
+      "state": "IN_PROGRESS",
+      "status": "approved",
+      "productParams": {
+        "dealFinAmount": 5000000
+      }
+    },
+    {
+      "productCode": "LP_RKO",
+      "state": "COMPLETED",
+      "status": "open"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "uuid": "lead-1",
+    "state": "SENT",
+    "productInfo": [
+      {"productCode": "LP_RKO", "state": "NEW"}
+    ]
+  },
+  {
+    "uuid": "lead-2",
+    "state": "CLOSED",
+    "status": "closed-success",
+    "productInfo": [
+      {"productCode": "LP_ACQ_TR", "state": "COMPLETED"}
+    ]
+  }
+]

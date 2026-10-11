@@ -1,0 +1,18 @@
+{
+  "requestId": "scoring-request-1",
+  "decision": "ACCEPT",
+  "limits": [
+    {
+      "monthsNumber": 24,
+      "prodCode": "LP_LOAN_BUS",
+      "loanProduct": "Кредит для бизнеса",
+      "productDescription": "До 24 месяцев",
+      "limitEndDate": "2026-12-31",
+      "interestRate": 14.5,
+      "limitMaxSum": {"amount": 7500000},
+      "product": "LOAN",
+      "creditRate": 14.5
+    }
+  ],
+  "companyCreditRating": "A"
+}

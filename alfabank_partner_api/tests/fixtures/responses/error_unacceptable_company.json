@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "status": 403,
+      "code": "UNACCEPTABLE_COMPANY",
+      "title": "Unacceptable company",
+      "detail": "Company already exists in system"
+    }
+  ]
+}

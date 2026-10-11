@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "status": 400,
+      "code": "validationError",
+      "title": "Validation error",
+      "detail": "phoneNumber: must match ^7\\d{10}$"
+    }
+  ]
+}
