@@ -1,0 +1,395 @@
+html,
+body {
+  height: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Arial;
+
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+
+  background: #fff;
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+}
+
+/* если браузер не поддерживает dvh — будет fallback */
+@supports not (height: 100dvh) {
+  body {
+    height: var(--app-height, 100vh);
+  }
+}
+
+.topbar {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.chat-title {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.chat-meta {
+  color: #666;
+  font-size: 12px;
+  text-align: left;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.muted {
+  color: #777;
+  font-size: 12px;
+}
+
+.messages {
+  flex: 1;
+  min-height: 0; /* критично для flex+overflow на мобилках */
+  overflow: auto;
+
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  background: #f6f6f6;
+  -webkit-overflow-scrolling: touch;
+
+  overscroll-behavior: contain;
+
+  /* чтобы последний пузырь не прятался под футером */
+  padding-bottom: calc(12px + var(--footer-h, 72px));
+  scroll-padding-bottom: calc(12px + var(--footer-h, 72px));
+}
+
+.msg {
+  display: flex;
+  align-items: flex-end;
+}
+.msg.me {
+  justify-content: flex-end;
+}
+.msg.them {
+  justify-content: flex-start;
+}
+
+.bubble {
+  max-width: 70%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  /* переносы и многострочность */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+
+  -webkit-user-select: text;
+  user-select: text;
+  display: inline-block;
+}
+
+.msg.me .bubble {
+  background: #dcf8c6;
+}
+
+.msg-link {
+  text-decoration: underline;
+  word-break: break-word;
+  color: #0066cc;
+}
+
+/* ===== Footer ===== */
+
+.footer {
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  align-items: flex-end;
+  background: #fff;
+}
+
+.composer textarea#text {
+  flex: 1;
+  min-width: 0;
+
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+
+  font-size: 16px; /* важно для iOS, чтобы не было автозума */
+  line-height: 1.35;
+
+  min-height: 44px;
+  max-height: 30vh;
+
+  resize: none;
+  overflow-y: hidden;
+
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+}
+
+.composer textarea#text:focus {
+  outline: none;
+  border-color: #4d90fe;
+}
+
+.composer button {
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  flex: 0 0 auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.composer button:active {
+  background: #f0f0f0;
+  transform: scale(0.98);
+}
+
+.file-input {
+  display: none;
+}
+
+.hint,
+.file-hint {
+  padding: 6px 10px;
+  border-top: 1px solid #eee;
+  font-size: 12px;
+  color: #444;
+  background: #fff;
+  word-break: break-word;
+}
+
+.file-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.file-link {
+  word-break: break-word;
+}
+.file-img {
+  max-width: 280px;
+  border-radius: 10px;
+  display: block;
+}
+
+.pay-btn {
+  background: #fff7e6;
+  border: 1px solid #f0c36d;
+}
+.pay-btn:hover {
+  background: #ffefc2;
+}
+
+.call-btn {
+  background: #e8f7ee;
+  border: 1px solid #6fc08d;
+}
+.call-btn:hover {
+  background: #d5f0e0;
+}
+.call-btn.waiting,
+.call-btn:disabled {
+  background: #e0e0e0;
+  border-color: #b7b7b7;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* ===== Редактирование сообщений ===== */
+.edited-mark {
+  font-size: 11px;
+  color: #888;
+  margin-left: 6px;
+  font-style: italic;
+}
+
+.msg.me .edited-mark {
+  color: #6b8c42;
+}
+
+.edit-msg-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  margin-left: 6px;
+  transition: opacity 0.2s;
+  position: relative;
+  top: -2px;
+}
+
+.bubble:hover .edit-msg-btn {
+  opacity: 1;
+}
+
+.edit-msg-btn:active {
+  transform: scale(0.9);
+}
+
+.cancel-edit-btn {
+  background: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-left: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.cancel-edit-btn:hover {
+  background: #cc0000;
+}
+
+.edit-hint {
+  background: #fff3cd;
+  color: #856404;
+  border-top: 1px solid #ffc107;
+}
+
+/* Темная тема для редактирования */
+@media (prefers-color-scheme: dark) {
+  .edited-mark {
+    color: #666;
+  }
+
+  .msg.me .edited-mark {
+    color: #4caf50;
+  }
+
+  .edit-hint {
+    background: #3d3d00;
+    color: #ffd54f;
+    border-color: #fbc02d;
+  }
+
+  .cancel-edit-btn {
+    background: #d32f2f;
+  }
+
+  .cancel-edit-btn:hover {
+    background: #b71c1c;
+  }
+}
+
+/* чуть компактнее на узких экранах */
+@media (max-width: 420px) {
+  .composer {
+    gap: 6px;
+    padding: 8px;
+  }
+  .composer button {
+    padding: 8px 10px;
+    min-height: 40px;
+    min-width: 40px;
+  }
+  .composer textarea#text {
+    padding: 8px 10px;
+    font-size: 16px !important;
+    min-height: 40px;
+  }
+  .bubble {
+    max-width: 82%;
+  }
+  .messages {
+    padding: 10px;
+    padding-bottom: calc(10px + var(--footer-h, 64px));
+  }
+}
+
+@media (max-width: 360px) {
+  .composer button {
+    padding: 6px 8px;
+    min-height: 36px;
+    min-width: 36px;
+  }
+  .composer textarea#text {
+    padding: 6px 8px;
+  }
+}
+
+/* Темная тема */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #000;
+    color: #fff;
+  }
+  .topbar {
+    background: #1a1a1a;
+    border-color: #333;
+  }
+  .messages {
+    background: #0a0a0a;
+  }
+  .bubble {
+    background: #2a2a2a;
+    color: #fff;
+  }
+  .msg.me .bubble {
+    background: #005c4b;
+  }
+
+  .footer {
+    background: #1a1a1a;
+    border-color: #333;
+  }
+  .composer {
+    background: #1a1a1a;
+  }
+  .composer textarea#text {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #fff;
+  }
+  .composer button {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #fff;
+  }
+
+  .hint,
+  .file-hint {
+    background: #1a1a1a;
+    border-color: #333;
+    color: #bbb;
+  }
+}

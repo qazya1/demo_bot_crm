@@ -1,0 +1,32 @@
+# Core web application (Django CRM)
+Django==4.2.9
+PyMySQL>=1.1.0
+mysql-connector-python>=9.0.0
+python-dotenv>=1.0.0
+cryptography>=41.0.0
+
+# Telegram and MAX bots
+python-telegram-bot[job-queue]>=22.0,<23
+aiohttp>=3.9.0,<4
+
+# FastAPI chat/webapp service
+fastapi>=0.110.0,<1
+uvicorn[standard]>=0.27.0,<1
+Jinja2>=3.1.0,<4
+python-multipart>=0.0.18,<1
+
+# HTTP clients and integrations
+requests>=2.31.0,<3
+httpx>=0.27.0,<1
+tenacity>=8.2.0,<10
+
+# Data validation and file generation
+pydantic[email]>=2.7,<3
+openpyxl>=3.1.0,<4
+qrcode[pil]>=7.4.2,<9
+
+# Asterisk ARI integration
+websocket-client>=1.7.0,<2
+
+# Production servers
+gunicorn>=21.2.0,<24

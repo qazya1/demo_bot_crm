@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Загрузка…</title>
+<!-- MAX WebApp SDK нужен для чтения initData из bridge -->
+<script src="https://st.max.ru/js/max-web-app.js"></script>
+<style>
+  body{display:flex;align-items:center;justify-content:center;
+       height:100vh;margin:0;font-family:system-ui,sans-serif;color:#555}
+</style>
+</head>
+<body>
+<p id="msg">Загрузка чата…</p>
+<script>
+(function(){
+  var token = null;
+
+  function pickStartParam(data) {
+    if (!data) return null;
+    var raw = data.start_param || data.WebAppStartParam || data.webappstartparam || data.startapp || null;
+    if (!raw) return null;
+    if (typeof raw === "string") return raw;
+    if (typeof raw === "object") return raw.value || raw.payload || raw.param || raw.start_param || null;
+    return null;
+  }
+
+  function fromInitData(initData) {
+    if (!initData || typeof initData !== "string") return null;
+    try {
+      var params = new URLSearchParams(decodeURIComponent(initData));
+      return pickStartParam({
+        start_param: params.get("start_param"),
+        WebAppStartParam: params.get("WebAppStartParam"),
+        webappstartparam: params.get("webappstartparam"),
+        startapp: params.get("startapp")
+      });
+    } catch(e) {
+      return null;
+    }
+  }
+
+  // 1) MAX Bridge (window.WebApp — официальный объект MAX SDK)
+  var bridge = window.WebApp;
+  if (bridge) {
+    token = pickStartParam(bridge.initDataUnsafe);
+    if (!token) token = fromInitData(bridge.initData);
+    // Сигнализируем MAX, что страница загружена
+    if (typeof bridge.ready === "function") bridge.ready();
+  }
+
+  // 2) URL query-param (open_app button fallback)
+  if (!token) {
+    var qs = new URLSearchParams(window.location.search);
+    token = qs.get("payload") || qs.get("WebAppStartParam") || qs.get("webappstartparam") || qs.get("startapp");
+  }
+
+  // 3) Некоторые webview прокидывают параметр во фрагмент (#...)
+  if (!token && window.location.hash) {
+    var hs = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    token = hs.get("payload") || hs.get("WebAppStartParam") || hs.get("webappstartparam") || hs.get("startapp");
+  }
+
+  if (token) {
+    token = String(token).trim();
+    window.location.replace("/chat?t=" + encodeURIComponent(token) + "&platform=max");
+  } else {
+    document.getElementById("msg").textContent =
+      "Не удалось открыть чат. Вернитесь в бот и нажмите кнопку заново.";
+  }
+})();
+</script>
+</body>
+</html>
