@@ -1,0 +1,402 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Мои финансы - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_mobile_base_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd6;
+            --color-success: #27ae60;
+            --color-warning: #f39c12;
+            --color-danger: #e74c3c;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+        }
+
+        .main-content { margin-left: 260px; min-height: 100vh; }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
+            color: white;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding-top: max(env(safe-area-inset-top), var(--spacing-lg));
+        }
+        .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+        .container { max-width: 1200px; margin: 0 auto; padding: var(--spacing-xl); }
+        .section {
+            background: var(--color-card-bg);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 2rem;
+        }
+        .section h2 { font-size: 1.3rem; margin-bottom: var(--spacing-md); border-bottom: 2px solid var(--color-border-light); padding-bottom: var(--spacing-sm); }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-lg); margin-bottom: 2rem; }
+        .stat-card {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .stat-card .label { font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--spacing-sm); }
+        .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--color-text); }
+        .stat-card .value.positive { color: var(--color-success); }
+        .stat-card .value.accent { color: var(--color-primary); }
+        .stat-card .value.warning { color: var(--color-warning); }
+        .stat-card .sub { font-size: 0.8rem; color: var(--color-text-muted); margin-top: var(--spacing-xs); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        th, td { padding: var(--spacing-sm) var(--spacing-md); text-align: left; border-bottom: 1px solid var(--color-border-light); }
+        th { background: var(--color-card-hover); font-weight: 600; color: #495057; }
+        .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+        .badge-draft { background: #fff3cd; color: #856404; }
+        .badge-approved { background: #cce5ff; color: #004085; }
+        .badge-paid { background: #d4edda; color: #155724; }
+        .badge-bonus { background: #d4edda; color: #155724; }
+        .badge-penalty { background: #f8d7da; color: #721c24; }
+        .money { font-family: 'SF Mono', monospace; text-align: right; }
+        .period-selector { display: flex; align-items: center; gap: var(--spacing-sm); margin-left: auto; }
+        .period-selector input {
+            padding: var(--spacing-sm);
+            min-height: var(--touch-target-min);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: var(--radius-sm);
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-size: 0.9rem;
+        }
+        .period-selector .btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 0; margin-bottom: 2rem; border-bottom: 2px solid var(--color-border-light); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .tab-btn {
+            padding: var(--spacing-md) var(--spacing-lg);
+            min-height: var(--touch-target-min);
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: -2px;
+            white-space: nowrap;
+        }
+        .tab-btn:hover { color: var(--color-primary); }
+        .tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Forecast bar */
+        .forecast-bar { background: var(--color-card-hover); border-radius: var(--radius-sm); padding: var(--spacing-sm) var(--spacing-md); margin-top: var(--spacing-md); }
+        .progress-wrap { background: var(--color-border-light); border-radius: var(--radius-sm); height: 8px; margin: var(--spacing-sm) 0; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--color-gradient-start), var(--color-gradient-end)); transition: width 0.5s; }
+        .comparison { font-size: 0.85rem; color: var(--color-text-muted); }
+        .comparison .up { color: var(--color-success); font-weight: 600; }
+        .comparison .down { color: var(--color-danger); font-weight: 600; }
+
+        .empty-state { text-align: center; color: var(--color-text-muted); padding: 2rem; }
+
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0; }
+            .container { padding: var(--spacing-md); }
+            .section { padding: var(--spacing-md); overflow-x: auto; }
+            .stat-grid { grid-template-columns: repeat(2, 1fr); gap: var(--spacing-sm); }
+            .page-header { padding: var(--spacing-md); flex-wrap: wrap; }
+            .period-selector { width: 100%; margin-top: var(--spacing-sm); }
+            .period-selector input { flex: 1; }
+            .tabs { -webkit-overflow-scrolling: touch; }
+            .tab-btn { padding: var(--spacing-sm) var(--spacing-md); font-size: 0.85rem; }
+            .stat-card .value { font-size: 1.5rem; }
+            table { font-size: 0.8rem; }
+            th, td { padding: var(--spacing-xs) var(--spacing-sm); }
+        }
+
+        @media (max-width: 480px) {
+            .stat-grid { grid-template-columns: 1fr; }
+            .page-header h1 { font-size: 1.3rem; }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .period-selector input {
+                background: rgba(255,255,255,0.1);
+                color: var(--color-text);
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .stat-card:hover {
+                transform: none;
+                box-shadow: var(--shadow-sm);
+            }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='partner_cabinet' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div><h1>💰 Мои финансы</h1></div>
+            <form class="period-selector" method="get">
+                <input type="month" name="period" value="{{ period }}">
+                <button class="btn">Показать</button>
+            </form>
+        </div>
+
+        <div class="container">
+            <!-- Карточки сводки -->
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="label">Рейтинг</div>
+                    <div class="value accent">{{ profile.rating|default_if_none:"0" }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Уровень</div>
+                    <div class="value">{{ profile.rating_tier|default:"Без уровня" }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Базовая ставка</div>
+                    <div class="value">{{ profile.base_revenue_pct|default_if_none:"50" }}%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Надбавка</div>
+                    <div class="value positive">{% if profile.override_revenue_pct %}+{{ profile.override_revenue_pct }}%{% else %}—{% endif %}</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('overview', this)">📋 Обзор</button>
+                <button class="tab-btn" onclick="switchTab('clients', this)">👤 По клиентам</button>
+                <button class="tab-btn" onclick="switchTab('services', this)">📦 По услугам</button>
+            </div>
+
+            <!-- Tab: Обзор -->
+            <div class="tab-content active" id="tab-overview">
+                <!-- Доход за период -->
+                <div class="section">
+                    <h2>Доход за {{ period }}</h2>
+                    {% if salary.id %}
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="label">Выручка</div>
+                            <div class="value">{{ salary.gross_revenue_rub|default_if_none:"0"|floatformat:0 }} &#8381;</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Эфф. ставка</div>
+                            <div class="value accent">{{ salary.effective_pct|default_if_none:"0" }}%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Базовая ЗП</div>
+                            <div class="value">{{ salary.base_salary_rub|default_if_none:"0"|floatformat:0 }} &#8381;</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Итого</div>
+                            <div class="value positive">{{ salary.final_salary_rub|default_if_none:"0"|floatformat:0 }} &#8381;</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="empty-state">Данные за {{ period }} пока не рассчитаны.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Корректировки -->
+                {% if adjustments %}
+                <div class="section">
+                    <h2>Корректировки</h2>
+                    <table>
+                        <thead><tr>
+                            <th>Дата</th><th>Тип</th><th class="money">Сумма</th><th>Комментарий</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for a in adjustments %}
+                        <tr>
+                            <td>{{ a.created_at|ru_date }}</td>
+                            <td>
+                                {% if a.adjustment_type == 'bonus' %}<span class="badge badge-bonus">Бонус</span>
+                                {% elif a.adjustment_type == 'penalty' %}<span class="badge badge-penalty">Штраф</span>
+                                {% else %}{{ a.adjustment_type }}{% endif %}
+                            </td>
+                            <td class="money">{{ a.amount_rub|floatformat:0 }} &#8381;</td>
+                            <td>{{ a.comment|default_if_none:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- История рейтинга -->
+                {% if rating_events %}
+                <div class="section">
+                    <h2>История рейтинга</h2>
+                    <table>
+                        <thead><tr>
+                            <th>Дата</th><th>Событие</th><th>Дельта</th><th>Комментарий</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for e in rating_events %}
+                        <tr>
+                            <td>{{ e.created_at|ru_date }}</td>
+                            <td>{{ e.event_type|default_if_none:"—" }}</td>
+                            <td>
+                                {% if e.delta > 0 %}<span style="color:#27ae60">+{{ e.delta }}</span>
+                                {% elif e.delta < 0 %}<span style="color:#e74c3c">{{ e.delta }}</span>
+                                {% else %}0{% endif %}
+                            </td>
+                            <td>{{ e.comment|default_if_none:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- Текущая статистика -->
+                {% if current_stats %}
+                <div class="section">
+                    <h2>Текущий месяц (промежуточно)</h2>
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="label">Оплат за период</div>
+                            <div class="value">{{ current_stats.cnt|default_if_none:"0" }}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Выручка (текущая)</div>
+                            <div class="value">{{ current_stats.total|default_if_none:"0"|floatformat:0 }} &#8381;</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Tab: По клиентам -->
+            <div class="tab-content" id="tab-clients">
+                <div class="section">
+                    <h2>Детализация по клиентам за {{ period }}</h2>
+                    {% if clients_detail %}
+                    <table>
+                        <thead><tr>
+                            <th>Клиент</th><th>ИНН</th><th>Консультаций</th><th class="money">Выручка</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for c in clients_detail %}
+                        <tr>
+                            <td><strong>{{ c.first_name|default:"" }} {{ c.last_name|default:"" }}</strong></td>
+                            <td>{{ c.inn|default:"—" }}</td>
+                            <td>{{ c.consult_count }}</td>
+                            <td class="money"><strong>{{ c.revenue|floatformat:0 }} &#8381;</strong></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight: 700; background: #f0f4ff;">
+                                <td colspan="2">Итого</td>
+                                <td>{% for c in clients_detail %}{% if forloop.last %}{{ clients_detail|length }} клиент(ов){% endif %}{% endfor %}</td>
+                                <td class="money">{{ current_stats.total|default_if_none:"0"|floatformat:0 }} &#8381;</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    {% else %}
+                    <p class="empty-state">Нет данных за выбранный период</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tab: По услугам -->
+            <div class="tab-content" id="tab-services">
+                <div class="section">
+                    <h2>Детализация по услугам за {{ period }}</h2>
+                    {% if services_detail %}
+                    <table>
+                        <thead><tr>
+                            <th>Тип услуги</th><th>Количество</th><th class="money">Средний чек</th><th class="money">Выручка</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for s in services_detail %}
+                        <tr>
+                            <td><strong>{{ s.service_type }}</strong></td>
+                            <td>{{ s.cnt }}</td>
+                            <td class="money">{{ s.avg_check|floatformat:0 }} &#8381;</td>
+                            <td class="money"><strong>{{ s.total_revenue|floatformat:0 }} &#8381;</strong></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="empty-state">Нет данных за выбранный период</p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+    <script>
+    function switchTab(name, btn) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        btn.classList.add('active');
+    }
+    </script>
+</body>
+</html>

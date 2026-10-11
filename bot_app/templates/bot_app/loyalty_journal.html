@@ -1,0 +1,178 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Журнал операций - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        .container { max-width: none; }
+        .section { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 2rem; }
+        .filters { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .filters select { padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; }
+        .filters .btn { padding: 0.5rem 1rem; }
+        .table-wrap { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 980px; }
+        th, td { padding: 0.75rem 0.7rem; text-align: left; border-bottom: 1px solid #ecf0f1; vertical-align: top; }
+        th { background: #f8f9fa; font-weight: 600; color: #495057; position: sticky; top: 0; }
+        td a { color: #667eea; text-decoration: none; font-weight: 500; }
+        td a:hover { text-decoration: underline; }
+        .credit { color: #27ae60; font-weight: 600; }
+        .debit { color: #e74c3c; font-weight: 600; }
+        .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: #e3e8ff; color: #667eea; white-space: nowrap; }
+        .badge.purchase { background: #d4edda; color: #155724; }
+        .badge.reserve { background: #fff3cd; color: #856404; }
+        .badge.redeem { background: #f8d7da; color: #721c24; }
+        .badge.release { background: #d1ecf1; color: #0c5460; }
+        .badge.expiry { background: #f5c6cb; color: #721c24; }
+        .badge.referral { background: #e7e7ff; color: #4a4aff; }
+        .badge.manual { background: #ffe7d1; color: #ff6b00; }
+        .pagination { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem; }
+        .pagination a, .pagination span { padding: 0.4rem 0.8rem; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+        .pagination a { background: #f0f0f0; color: #333; }
+        .pagination a:hover { background: #667eea; color: white; }
+        .pagination .current { background: #667eea; color: white; }
+        .btn { border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #667eea; color: white; }
+        .meta-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: #888; }
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .section { padding: 1rem; overflow-x: auto; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='loyalty_journal' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div>
+                <h1>Журнал бонусных операций</h1>
+                <div class="subtitle">Всего: {{ total }} записей</div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="section">
+                <form class="filters" method="get">
+                    <select name="event_type">
+                        <option value="">Все события</option>
+                        <option value="purchase" {% if event_filter == 'purchase' %}selected{% endif %}>Покупка</option>
+                        <option value="first_purchase" {% if event_filter == 'first_purchase' %}selected{% endif %}>Первая покупка</option>
+                        <option value="profile_field" {% if event_filter == 'profile_field' %}selected{% endif %}>Профиль</option>
+                        <option value="referral_activation" {% if event_filter == 'referral_activation' %}selected{% endif %}>Реферал</option>
+                        <option value="referral_verification" {% if event_filter == 'referral_verification' %}selected{% endif %}>Верификация реф.</option>
+                        <option value="qr_collection" {% if event_filter == 'qr_collection' %}selected{% endif %}>QR-коллекция</option>
+                        <option value="reserve" {% if event_filter == 'reserve' %}selected{% endif %}>Резерв</option>
+                        <option value="redeem" {% if event_filter == 'redeem' %}selected{% endif %}>Списание</option>
+                        <option value="release" {% if event_filter == 'release' %}selected{% endif %}>Возврат</option>
+                        <option value="expiry" {% if event_filter == 'expiry' %}selected{% endif %}>Сгорание</option>
+                    </select>
+                    <select name="direction">
+                        <option value="">Все направления</option>
+                        <option value="credit" {% if direction_filter == 'credit' %}selected{% endif %}>Начисление</option>
+                        <option value="debit" {% if direction_filter == 'debit' %}selected{% endif %}>Списание</option>
+                    </select>
+                    <button class="btn btn-primary" style="padding:0.5rem 1rem;font-size:0.85rem">Фильтр</button>
+                </form>
+
+                <div class="table-wrap">
+                <table>
+                    <thead><tr>
+                        <th style="width:50px">ID</th>
+                        <th style="width:130px">Дата</th>
+                        <th style="width:200px">Клиент</th>
+                        <th style="width:110px">Направление</th>
+                        <th style="width:80px">Баллы</th>
+                        <th style="width:150px">Событие</th>
+                        <th>Описание</th>
+                        <th style="width:150px">Ключ</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for tx in transactions %}
+                    <tr>
+                        <td>{{ tx.id }}</td>
+                        <td style="white-space:nowrap">{{ tx.created_at|ru_datetime }}</td>
+                        <td>
+                            {% if tx.owner_type == 'client' %}
+                                {% if tx.first_name or tx.last_name %}
+                                    <a href="/crm/client/{{ tx.owner_id }}/" style="color:#667eea;text-decoration:none">
+                                        {{ tx.first_name }} {{ tx.last_name }}
+                                    </a>
+                                    {% if tx.phone %}<br><small style="color:#888">{{ tx.phone }}</small>{% endif %}
+                                {% elif tx.inn %}
+                                    <span>ИНН: {{ tx.inn }}</span>
+                                {% elif tx.phone %}
+                                    <span>{{ tx.phone }}</span>
+                                {% else %}
+                                    <span style="color:#999">Клиент #{{ tx.owner_id }}</span>
+                                {% endif %}
+                            {% elif tx.owner_type == 'specialist' %}
+                                {% if tx.specialist_name %}
+                                    <span>👤 {{ tx.specialist_name }}</span>
+                                {% else %}
+                                    <span>Специалист #{{ tx.owner_id }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span style="color:#999">{{ tx.owner_type }}:{{ tx.owner_id }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="{% if tx.direction == 'credit' %}credit{% else %}debit{% endif %}">
+                                {% if tx.direction == 'credit' %}Начисление{% else %}Списание{% endif %}
+                            </span>
+                        </td>
+                        <td><span class="{% if tx.direction == 'credit' %}credit{% else %}debit{% endif %}">{% if tx.direction == 'credit' %}+{% else %}-{% endif %}{{ tx.amount }}</span></td>
+                        <td>
+                            <span class="badge {% if 'purchase' in tx.event_type %}purchase{% elif 'reserve' in tx.event_type %}reserve{% elif 'redeem' in tx.event_type %}redeem{% elif 'release' in tx.event_type %}release{% elif 'expiry' in tx.event_type %}expiry{% elif 'referral' in tx.event_type %}referral{% elif 'manual' in tx.event_type %}manual{% endif %}">
+                                {% if tx.event_type == 'purchase' %}Покупка
+                                {% elif tx.event_type == 'first_purchase' %}Первая покупка
+                                {% elif tx.event_type == 'profile_field' %}Заполнение профиля
+                                {% elif tx.event_type == 'referral_activation' %}Реферал
+                                {% elif tx.event_type == 'referral_verification' %}Верификация реф.
+                                {% elif tx.event_type == 'qr_collection' %}QR-коллекция
+                                {% elif tx.event_type == 'reserve' %}Резерв
+                                {% elif tx.event_type == 'redeem' %}Списание
+                                {% elif tx.event_type == 'release' %}Возврат
+                                {% elif tx.event_type == 'expiry' %}Сгорание
+                                {% elif tx.event_type == 'manual_accrual' %}Ручное начисление
+                                {% elif tx.event_type == 'manual_debit' %}Ручное списание
+                                {% elif tx.event_type == 'manual_rating_adjustment' %}Корр. рейтинга
+                                {% elif 'test' in tx.event_type %}Тест
+                                {% else %}{{ tx.event_type }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>{{ tx.description|default:"-" }}</td>
+                        <td class="meta-cell" title="{{ tx.idempotency_key }}">{{ tx.idempotency_key }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" style="text-align:center;color:#999;padding:2rem">Нет операций</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+
+                {% if total_pages > 1 %}
+                <div class="pagination">
+                    {% if page > 1 %}<a href="?page={{ page|add:"-1" }}&event_type={{ event_filter }}&direction={{ direction_filter }}">&laquo;</a>{% endif %}
+                    {% for p in page_range %}
+                        {% if p == page %}
+                        <span class="current">{{ p }}</span>
+                        {% else %}
+                        <a href="?page={{ p }}&event_type={{ event_filter }}&direction={{ direction_filter }}">{{ p }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page < total_pages %}<a href="?page={{ page|add:"1" }}&event_type={{ event_filter }}&direction={{ direction_filter }}">&raquo;</a>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

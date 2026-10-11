@@ -1,0 +1,388 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Заказ #{{ order.id }} — CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-border: #e0e0e0;
+            --color-primary: #667eea;
+            --color-success: #27ae60;
+            --color-warning: #f39c12;
+            --color-danger: #e74c3c;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+        body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); padding-bottom: env(safe-area-inset-bottom); }
+        .header {
+            background: var(--color-card-bg);
+            padding: var(--spacing-md) var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding-top: max(env(safe-area-inset-top), var(--spacing-md));
+        }
+        .header h1 { font-size: 1.4rem; font-weight: 600; color: var(--color-text); }
+        .header-back { color: var(--color-primary); text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 0.4rem; }
+        .header-back:hover { text-decoration: underline; }
+        .content { padding: var(--spacing-lg) var(--spacing-xl); max-width: 1100px; margin: 0 auto; }
+
+        .order-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xl);
+            color: white;
+            margin-bottom: var(--spacing-lg);
+        }
+        .order-hero h2 { font-size: 1.75rem; margin: 0 0 0.5rem; }
+        .order-hero .amount { font-size: 2rem; font-weight: 700; margin: 0.5rem 0; }
+        .order-meta { display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1rem; }
+        .order-meta-item .label { font-size: 0.75rem; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; }
+        .order-meta-item .value { font-size: 0.95rem; font-weight: 500; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
+        .card { background: var(--color-card-bg); border-radius: var(--radius-md); box-shadow: var(--shadow-md); overflow: hidden; }
+        .card-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; }
+        .card-header h3 { font-size: 1rem; font-weight: 600; color: var(--color-text); }
+        .card-body { padding: 1.25rem 1.5rem; }
+
+        .field-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; }
+        .field-row:last-child { border-bottom: none; }
+        .field-label { color: var(--color-text-muted); font-size: 0.85rem; flex-shrink: 0; margin-right: 1rem; }
+        .field-value { color: var(--color-text); font-size: 0.9rem; text-align: right; word-break: break-word; }
+        .field-value a { color: var(--color-primary); text-decoration: none; }
+        .field-value a:hover { text-decoration: underline; }
+
+        .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-success { background: #d5f5e3; color: #196f3d; }
+        .badge-warning { background: #fef9e7; color: #b7950b; }
+        .badge-danger { background: #fadbd8; color: #922b21; }
+        .badge-primary { background: #d6eaf8; color: #1a5276; }
+        .badge-secondary { background: #f2f3f4; color: #626567; }
+        .badge-advance { background: #fde8d8; color: #a04000; }
+        .badge-manual { background: #e8daef; color: #6c3483; }
+
+        .items-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .items-table th { background: #f8f9fa; padding: 0.75rem 1rem; text-align: left; font-weight: 600; color: var(--color-text-muted); border-bottom: 2px solid var(--color-border); font-size: 0.8rem; text-transform: uppercase; }
+        .items-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #f0f0f0; }
+        .items-table tr:last-child td { border-bottom: none; }
+        .items-table .total-row td { font-weight: 700; background: #f8f9fa; border-top: 2px solid var(--color-border); }
+
+        .link-card { background: #f0f4ff; border: 1px solid #c5d5fb; border-radius: var(--radius-sm); padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+        .link-card:last-child { margin-bottom: 0; }
+        .link-card .link-info { font-size: 0.9rem; color: var(--color-text); }
+        .link-card .link-info .sub { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.2rem; }
+        .link-card a { color: var(--color-primary); text-decoration: none; font-weight: 600; font-size: 0.85rem; white-space: nowrap; }
+        .link-card a:hover { text-decoration: underline; }
+
+        .empty-state { color: var(--color-text-muted); font-size: 0.9rem; padding: 1rem 0; }
+
+        @media (max-width: 768px) {
+            .content { padding: var(--spacing-md); }
+            .header { padding: var(--spacing-md); }
+            .order-hero { padding: var(--spacing-lg); }
+            .order-meta { gap: 1rem; }
+            .order-hero h2 { font-size: 1.3rem; }
+            .order-hero .amount { font-size: 1.5rem; }
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='crm_orders' %}
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+                <a href="{% if back_url %}{{ back_url }}{% else %}{% url 'bot_app:crm_orders' %}{% endif %}" class="header-back">{% if back_url %}← Назад к клиенту{% else %}← Сделки{% endif %}</a>
+            </div>
+            <h1>Заказ #{{ order.id }}</h1>
+            <div><a class="header-back" href="{% url 'bot_app:crm_orders' %}?edit_order={{ order.id }}">✏️ Редактировать</a></div>
+        </div>
+
+        <div class="content">
+
+            <!-- Hero-шапка заказа -->
+            <div class="order-hero">
+                <h2>Заказ #{{ order.id }}</h2>
+                <div class="amount">{{ order.amount }} ₽</div>
+                <div class="order-meta">
+                    <div class="order-meta-item">
+                        <div class="label">Статус</div>
+                        <div class="value">
+                            {% if order.status == 'CONFIRMED' %}✅ Оплачен
+                            {% elif order.status == 'ADVANCE' %}💛 Аванс
+                            {% elif order.status == 'CANCELLED' %}❌ Отменён
+                            {% elif order.status == 'INIT' %}⏳ Не оплачен
+                            {% elif order.status == 'REFUNDED' %}↩️ Возврат
+                            {% else %}{{ order.status }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="order-meta-item">
+                        <div class="label">Источник</div>
+                        <div class="value">
+                            {% if order.source == 'telegram' %}Telegram
+                            {% elif order.source == 'max' %}Max
+                            {% elif order.source == 'manual' %}Ручная сделка
+                            {% elif order.source == 'chat' %}Чат
+                            {% else %}{{ order.source|default:"—" }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="order-meta-item">
+                        <div class="label">Создан</div>
+                        <div class="value">{{ order.created_at|ru_datetime }}</div>
+                    </div>
+                    {% if order.paid_at %}
+                    <div class="order-meta-item">
+                        <div class="label">Оплачен</div>
+                        <div class="value">{{ order.paid_at|ru_datetime }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid">
+
+                <!-- Данные покупателя -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>👤 Покупатель</h3>
+                        {% if order.user_id %}
+                        <a href="{% url 'bot_app:crm_client_detail' order.user_id %}" style="color: var(--color-primary); font-size: 0.85rem; text-decoration: none;">Карточка →</a>
+                        {% elif order.company_id %}
+                        <a href="{% url 'bot_app:crm_company_detail' order.company_id %}" style="color: var(--color-primary); font-size: 0.85rem; text-decoration: none;">Компания →</a>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% if order.org_name or order.first_name or order.last_name or order.company_name %}
+                        <div class="field-row">
+                            <span class="field-label">Имя / Орг.</span>
+                            <span class="field-value">
+                                {% if order.company_name %}<strong>🏢 {{ order.company_name }}</strong>{% endif %}
+                                {% if order.org_name %}{% if order.company_name %}<br>{% endif %}{{ order.org_name }}{% endif %}
+                                {% if order.first_name or order.last_name %}{% if order.company_name or order.org_name %}<br>{% endif %}{{ order.first_name|default:"" }} {{ order.last_name|default:"" }}{% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% if order.inn %}
+                        <div class="field-row">
+                            <span class="field-label">ИНН</span>
+                            <span class="field-value">{{ order.inn }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.kpp %}
+                        <div class="field-row">
+                            <span class="field-label">КПП</span>
+                            <span class="field-value">{{ order.kpp }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.phone %}
+                        <div class="field-row">
+                            <span class="field-label">Телефон</span>
+                            <span class="field-value"><a href="tel:{{ order.phone }}">{{ order.phone }}</a></span>
+                        </div>
+                        {% endif %}
+                        {% if order.email %}
+                        <div class="field-row">
+                            <span class="field-label">Email</span>
+                            <span class="field-value"><a href="mailto:{{ order.email }}">{{ order.email }}</a></span>
+                        </div>
+                        {% endif %}
+                        {% if order.city %}
+                        <div class="field-row">
+                            <span class="field-label">Город</span>
+                            <span class="field-value">{{ order.city }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.tg_username %}
+                        <div class="field-row">
+                            <span class="field-label">Telegram</span>
+                            <span class="field-value">@{{ order.tg_username }}</span>
+                        </div>
+                        {% endif %}
+                        {% if not order.user_id and not order.company_id %}
+                        <div class="empty-state">Покупатель не привязан</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Детали заказа -->
+                <div class="card">
+                    <div class="card-header"><h3>📋 Детали заказа</h3></div>
+                    <div class="card-body">
+                        <div class="field-row">
+                            <span class="field-label">ID заказа</span>
+                            <span class="field-value"><strong>#{{ order.id }}</strong></span>
+                        </div>
+                        <div class="field-row">
+                            <span class="field-label">Сумма</span>
+                            <span class="field-value"><strong>{{ order.amount }} ₽</strong></span>
+                        </div>
+                        <div class="field-row">
+                            <span class="field-label">Статус</span>
+                            <span class="field-value">
+                                {% if order.status == 'CONFIRMED' %}<span class="badge badge-success">✅ Оплачен</span>
+                                {% elif order.status == 'ADVANCE' %}<span class="badge badge-advance">💛 Аванс</span>
+                                {% elif order.status == 'CANCELLED' %}<span class="badge badge-danger">❌ Отменён</span>
+                                {% elif order.status == 'INIT' %}<span class="badge badge-secondary">⏳ Не оплачен</span>
+                                {% elif order.status == 'REFUNDED' %}<span class="badge badge-danger">↩️ Возврат</span>
+                                {% else %}<span class="badge badge-secondary">{{ order.status }}</span>{% endif %}
+                            </span>
+                        </div>
+                        <div class="field-row">
+                            <span class="field-label">Источник</span>
+                            <span class="field-value">
+                                {% if order.source == 'telegram' %}<span class="badge badge-primary">Telegram</span>
+                                {% elif order.source == 'max' %}<span class="badge badge-warning">Max</span>
+                                {% elif order.source == 'manual' %}<span class="badge badge-manual">Ручная</span>
+                                {% elif order.source == 'chat' %}<span class="badge badge-primary">Чат</span>
+                                {% else %}<span class="badge badge-secondary">{{ order.source|default:"—" }}</span>{% endif %}
+                            </span>
+                        </div>
+                        {% if order.payment_id %}
+                        <div class="field-row">
+                            <span class="field-label">ID платежа</span>
+                            <span class="field-value" style="font-family: monospace; font-size: 0.8rem;">{{ order.payment_id }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.order_address %}
+                        <div class="field-row">
+                            <span class="field-label">Адрес доставки</span>
+                            <span class="field-value">{{ order.order_address }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.description %}
+                        <div class="field-row">
+                            <span class="field-label">Описание</span>
+                            <span class="field-value">{{ order.description }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="field-row">
+                            <span class="field-label">Комментарий</span>
+                            <span class="field-value">{{ order.internal_comment|default:"Комментарий не указан" }}</span>
+                        </div>
+                        {% if order.specialist_name %}
+                        <div class="field-row">
+                            <span class="field-label">Специалист</span>
+                            <span class="field-value">{{ order.specialist_name }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.author_name %}
+                        <div class="field-row">
+                            <span class="field-label">Автор</span>
+                            <span class="field-value">{{ order.author_name }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="field-row">
+                            <span class="field-label">Создан</span>
+                            <span class="field-value">{{ order.created_at|ru_datetime }}</span>
+                        </div>
+                        {% if order.paid_at %}
+                        <div class="field-row">
+                            <span class="field-label">Дата оплаты</span>
+                            <span class="field-value">{{ order.paid_at|ru_datetime }}</span>
+                        </div>
+                        {% endif %}
+                        {% if order.updated_at %}
+                        <div class="field-row">
+                            <span class="field-label">Обновлён</span>
+                            <span class="field-value">{{ order.updated_at|ru_datetime }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Позиции заказа -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header"><h3>🛒 Состав заказа</h3></div>
+                <div class="card-body" style="padding: 0;">
+                    {% if items %}
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Товар / Услуга</th>
+                                <th style="text-align:center;">Кол-во</th>
+                                <th style="text-align:right;">Цена</th>
+                                <th style="text-align:right;">Сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    {% if item.legacy_item_title %}
+                                        {{ item.legacy_item_title }}
+                                        {% if item.legacy_item_type %}<br><span style="font-size:0.75rem;color:var(--color-text-muted);">{{ item.legacy_item_type }}</span>{% endif %}
+                                    {% elif item.equipment_name %}
+                                        🛠 {{ item.equipment_name }}
+                                    {% elif item.ext_operator_name %}
+                                        {{ item.ext_operator_name }}{% if item.ext_type_name %} — {{ item.ext_type_name }}{% endif %}
+                                        {% if item.code_type %}<br><span style="font-size:0.75rem;color:var(--color-text-muted);">{{ item.code_type }}</span>{% endif %}
+                                    {% elif item.code_value %}
+                                        <span style="font-family:monospace;">{{ item.code_value }}</span>
+                                    {% else %}
+                                        Позиция #{{ item.id }}
+                                    {% endif %}
+                                </td>
+                                <td style="text-align:center;">{{ item.qty }}</td>
+                                <td style="text-align:right;">{{ item.price }} ₽</td>
+                                <td style="text-align:right;font-weight:600;">{{ item.qty|default:1|floatformat:0 }}×{{ item.price }} ₽</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td colspan="3">Итого</td>
+                                <td style="text-align:right;">{{ order.amount }} ₽</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state" style="padding: 1.25rem 1.5rem;">Позиции заказа не найдены</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Связанная сделка (чат-платёж) -->
+            {% if chat_payment %}
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header"><h3>💬 Связанная сделка в чате</h3></div>
+                <div class="card-body">
+                    <div class="link-card">
+                        <div class="link-info">
+                            <strong>Чат #{{ chat_payment.chat_id }}</strong>
+                            {% if chat_payment.category %} — {{ chat_payment.category }}{% endif %}
+                            {% if chat_payment.chat_specialist_name %}<br><span class="sub">Специалист: {{ chat_payment.chat_specialist_name }}</span>{% endif %}
+                            <br><span class="sub">Статус платежа: {{ chat_payment.status }} · {{ chat_payment.created_at|ru_datetime }}</span>
+                        </div>
+                        <a href="{% url 'bot_app:crm_chat_detail' chat_payment.chat_id %}">Открыть чат →</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

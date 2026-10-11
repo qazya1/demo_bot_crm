@@ -1,0 +1,869 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Дашборд - CRM Бот</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        /* === Специфичные стили для Dashboard === */
+        .container { max-width: none; }
+        .stats-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+        
+        /* Карусель предупреждений */
+        .alerts-carousel-wrap { margin-bottom: 2rem; position: relative; overflow: hidden; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .alerts-carousel { position: relative; min-height: 64px; }
+        .carousel-slide { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; position: absolute; top: 0; left: 0; right: 0; opacity: 0; transform: translateY(10px); transition: opacity 0.5s ease, transform 0.5s ease; pointer-events: none; }
+        .carousel-slide.active { position: relative; opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .slide-danger { background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border-left: 4px solid #e74c3c; }
+        .slide-warning { background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); border-left: 4px solid #f39c12; }
+        .slide-info { background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border-left: 4px solid #3498db; }
+        .slide-icon { font-size: 1.5rem; flex-shrink: 0; }
+        .slide-text { flex: 1; font-size: 0.95rem; color: #2c3e50; }
+        .slide-link { flex-shrink: 0; font-weight: 700; font-size: 0.85rem; color: #667eea; text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 6px; background: rgba(255,255,255,0.6); transition: all 0.2s; }
+        .slide-link:hover { background: rgba(255,255,255,0.9); }
+        .carousel-dots { display: flex; justify-content: center; gap: 6px; padding: 0.5rem; background: rgba(255,255,255,0.8); }
+        .carousel-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s; border: none; padding: 0; }
+        .carousel-dot.active { background: #667eea; transform: scale(1.3); }
+        
+        /* Модальное окно */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; border-radius: 16px; width: 90%; max-width: 1100px; max-height: 85vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalSlide 0.3s ease; }
+        @keyframes modalSlide { from { opacity: 0; transform: translateY(-50px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { margin: 0; font-size: 1.5rem; }
+        .modal-close { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+        .modal-close:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
+        .modal-toolbar { padding: 1rem 2rem; background: #f8f9fa; border-bottom: 1px solid #ecf0f1; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+        .modal-toolbar input { padding: 0.75rem 1rem; border: 2px solid #ecf0f1; border-radius: 8px; font-size: 1rem; width: 300px; transition: border-color 0.3s; }
+        .modal-toolbar input:focus { outline: none; border-color: #667eea; }
+        .mobile-actions { display: flex; gap: 0.5rem; flex: 1; justify-content: flex-end; flex-wrap: wrap; }
+        .mobile-actions .btn { flex: 0 1 auto; }
+        .modal-body { padding: 0; max-height: calc(85vh - 180px); overflow-y: auto; }
+        .modal-body table th { position: sticky; top: 0; z-index: 10; }
+        .action-btn { padding: 0.4rem 0.8rem; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; margin-right: 0.5rem; transition: all 0.2s; text-decoration: none; }
+        .action-btn.edit { background: #e3e8ff; color: #667eea; }
+        .action-btn.edit:hover { background: #667eea; color: white; }
+        .action-btn.view { background: #d4edda; color: #27ae60; }
+        .action-btn.view:hover { background: #27ae60; color: white; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .status-dot.green { background: #2ecc71; }
+        .status-dot.orange { background: #f39c12; }
+        .status-dot.red { background: #e74c3c; }
+        .status-dot.gray { background: #95a5a6; }
+        
+        /* Уникальные стили для stat-card Dashboard */
+        .stat-card::after { content: '→'; position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: #ccc; transition: all 0.3s; }
+        .stat-card:hover::after { right: 1rem; color: #667eea; }
+        .stat-card.no-click::after { display: none; }
+
+        /* Мобильная адаптация - специфичная для dashboard */
+        @media (max-width: 768px) {
+            /* Карточный вид для таблиц в модальных окнах */
+            .modal-body table { display: block; }
+            .modal-body table thead { display: none; }
+            .modal-body table tbody { display: block; }
+            .modal-body table tr { display: block; background: #f8f9fa; border-radius: 8px; margin-bottom: 1rem; padding: 1rem; border: 1px solid #e0e0e0; }
+            .modal-body table td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #ecf0f1; }
+            .modal-body table td:last-child { border-bottom: none; }
+            .modal-body table td::before { content: attr(data-label); font-weight: 600; color: #7f8c8d; margin-right: 1rem; min-width: 120px; }
+            .modal-body table td .action-btn { min-height: 36px; min-width: 36px; }
+            .modal-body table tr:hover { background: #f8f9fa; }
+            .modal-content { width: 96%; max-width: none; max-height: 90vh; }
+            .modal-header { padding: 1rem 1.25rem; }
+            .modal-header h2 { font-size: 1.2rem; }
+            .modal-toolbar { padding: 0.75rem 1rem; flex-direction: column; align-items: stretch; }
+            .modal-toolbar input { width: 100%; font-size: 16px; min-height: 44px; }
+            .modal-toolbar .mobile-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: stretch; }
+            .modal-toolbar .mobile-actions .btn { flex: 1; min-width: 120px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+            .modal-body { max-height: calc(90vh - 160px); }
+            .action-btn { min-height: 36px; padding: 0.5rem 1rem; }
+            .alerts-carousel-wrap { margin-bottom: 1rem; }
+            .carousel-slide { padding: 0.75rem 1rem; gap: 0.5rem; flex-wrap: wrap; }
+            .slide-text { font-size: 0.85rem; }
+            .slide-link { font-size: 0.8rem; min-height: 36px; display: inline-flex; align-items: center; }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); touch-action: manipulation; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='dashboard' %}
+
+    <div class="main-content">
+    <div class="page-header">
+        <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+        <h1>🤖 Панель управления</h1>
+        <div class="subtitle">Полная статистика и аналитика системы</div>
+    </div>
+
+    <div class="container">
+        <!-- КЛИКАБЕЛЬНЫЕ КАРТОЧКИ -->
+        <div class="stats-grid">
+            <div class="stat-card primary" onclick="openModal('users')">
+                <h3>Всего пользователей</h3>
+                <div class="value">{{ stats.total_users }}</div>
+                <div class="label">✓ Верифицировано: {{ stats.verified_users }}</div>
+                <div class="label">🚀 Активировались: {{ stats.activated_users }} (TG: {{ stats.tg_users }} / Max: {{ stats.max_users }})</div>
+            </div>
+            <div class="stat-card success" onclick="openModal('clients')">
+                <h3>Клиенты</h3>
+                <div class="value">{{ stats.total_clients }}</div>
+                <div class="label">🏢 В базе</div>
+            </div>
+            <div class="stat-card warning" onclick="openModal('orders')">
+                <h3>Заказы</h3>
+                <div class="value">{{ stats.total_orders }}</div>
+                <div class="label">✅ Оплачено: {{ stats.paid_orders }} (TG: {{ stats.tg_orders }} / Max: {{ stats.max_orders }})</div>
+            </div>
+            <div class="stat-card success" onclick="openModal('revenue')">
+                <h3>Выручка</h3>
+                <div class="value">{{ financial.total_revenue|floatformat:0 }} ₽</div>
+                <div class="label">💰 Всего</div>
+            </div>
+            <div class="stat-card info" onclick="openModal('chats')">
+                <h3>Чаты</h3>
+                <div class="value">{{ stats.total_chats }}</div>
+                <div class="label">💬 Активных: {{ stats.active_chats }}</div>
+            </div>
+            <div class="stat-card primary" onclick="openModal('specialists')">
+                <h3>Специалисты</h3>
+                <div class="value">{{ stats.active_specialists }}</div>
+                <div class="label">👨‍💼 Активных</div>
+            </div>
+        </div>
+
+        <!-- КАРУСЕЛЬ ПРЕДУПРЕЖДЕНИЙ И УВЕДОМЛЕНИЙ -->
+        {% if expiring.details or dashboard_notifications %}
+        <div class="alerts-carousel-wrap">
+            <div class="alerts-carousel" id="alertsCarousel">
+                {% for item in expiring.details %}
+                <div class="carousel-slide slide-{% if item.fn_expires_at and item.fn_expires_at < today or item.mark_expires_at and item.mark_expires_at < today or item.ofd_expires_at and item.ofd_expires_at < today %}danger{% else %}warning{% endif %}">
+                    <span class="slide-icon">{% if item.fn_expires_at and item.fn_expires_at < today or item.mark_expires_at and item.mark_expires_at < today or item.ofd_expires_at and item.ofd_expires_at < today %}🔴{% else %}🟠{% endif %}</span>
+                    <div class="slide-text">
+                        <strong>{{ item.org_name|default:item.first_name|default:"Клиент" }} {{ item.last_name|default:"" }}</strong>
+                        {% if item.inn %}<small style="opacity:0.7;">(ИНН: {{ item.inn }})</small>{% endif %}
+                        — ККТ #{{ item.kkt_slot }}{% if item.kkt_name %} «{{ item.kkt_name }}»{% endif %}:
+                        {% if item.fn_expires_at and item.fn_expires_at < today %}ФН истёк {{ item.fn_expires_at|ru_date }}
+                        {% elif item.fn_expires_at %}ФН истекает {{ item.fn_expires_at|ru_date }}
+                        {% endif %}
+                        {% if item.ofd_expires_at and item.ofd_expires_at < today %}ОФД истёк {{ item.ofd_expires_at|ru_date }}
+                        {% elif item.ofd_expires_at %}ОФД истекает {{ item.ofd_expires_at|ru_date }}
+                        {% endif %}
+                        {% if item.mark_expires_at and item.mark_expires_at < today %}Маркировка истекла {{ item.mark_expires_at|ru_date }}
+                        {% elif item.mark_expires_at %}Маркировка истекает {{ item.mark_expires_at|ru_date }}
+                        {% endif %}
+                    </div>
+                    {% if item.client_id %}
+                    <a href="/crm/client/{{ item.client_id }}/" class="slide-link">Карточка →</a>
+                    {% elif item.company_id %}
+                    <a href="/crm/company/{{ item.company_id }}/" class="slide-link">Компания →</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% for notif in dashboard_notifications %}
+                <div class="carousel-slide slide-{% if notif.priority == 'urgent' %}danger{% elif notif.priority == 'high' %}warning{% else %}info{% endif %}">
+                    <span class="slide-icon">{{ notif.type_icon|default:"🔔" }}</span>
+                    <div class="slide-text">
+                        <strong>{{ notif.title }}</strong>{% if notif.message %} — {{ notif.message|truncatewords:12 }}{% endif %}
+                    </div>
+                    {% if notif.client_id %}
+                    <a href="/crm/client/{{ notif.client_id }}/" class="slide-link">Карточка →</a>
+                    {% else %}
+                    <a href="/notifications/" class="slide-link">Открыть →</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="carousel-dots" id="carouselDots"></div>
+        </div>
+        {% endif %}
+
+        <!-- Финансы -->
+        <div class="section">
+            <h2>💵 Финансы</h2>
+            <div class="stats-grid">
+                <div class="stat-card no-click">
+                    <h3>Выручка за 30 дней</h3>
+                    <div class="value" style="color: #2ecc71;">{{ financial.revenue_30d|floatformat:0 }} ₽</div>
+                </div>
+                <div class="stat-card no-click">
+                    <h3>Прибыль</h3>
+                    <div class="value" style="color: #f39c12;">{{ financial.profit|floatformat:0 }} ₽</div>
+                </div>
+                <div class="stat-card no-click">
+                    <h3>Средний чек</h3>
+                    <div class="value" style="color: #3498db;">{{ financial.avg_order|floatformat:0 }} ₽</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Последние заказы -->
+        <div class="section">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h2 style="margin:0;">🛒 Последние заказы</h2>
+                <a href="{% url 'bot_app:crm_orders' %}" style="color:#667eea;font-size:0.9rem;text-decoration:none;font-weight:600;">Все заказы →</a>
+            </div>
+            <div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                    <thead>
+                        <tr style="background:#f8f9fa;">
+                            <th style="padding:0.75rem 1rem;text-align:left;font-weight:600;color:#7f8c8d;border-bottom:2px solid #e0e0e0;font-size:0.8rem;text-transform:uppercase;">#</th>
+                            <th style="padding:0.75rem 1rem;text-align:left;font-weight:600;color:#7f8c8d;border-bottom:2px solid #e0e0e0;font-size:0.8rem;text-transform:uppercase;">Покупатель</th>
+                            <th style="padding:0.75rem 1rem;text-align:left;font-weight:600;color:#7f8c8d;border-bottom:2px solid #e0e0e0;font-size:0.8rem;text-transform:uppercase;">Сумма</th>
+                            <th style="padding:0.75rem 1rem;text-align:left;font-weight:600;color:#7f8c8d;border-bottom:2px solid #e0e0e0;font-size:0.8rem;text-transform:uppercase;">Статус</th>
+                            <th style="padding:0.75rem 1rem;text-align:left;font-weight:600;color:#7f8c8d;border-bottom:2px solid #e0e0e0;font-size:0.8rem;text-transform:uppercase;">Дата</th>
+                            <th style="padding:0.75rem 1rem;text-align:left;font-weight:600;color:#7f8c8d;border-bottom:2px solid #e0e0e0;font-size:0.8rem;text-transform:uppercase;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in all_orders|slice:":15" %}
+                        <tr style="border-bottom:1px solid #f0f0f0;">
+                            <td style="padding:0.75rem 1rem;"><a href="{% url 'bot_app:crm_order_detail' order.id %}" style="font-weight:700;color:#667eea;text-decoration:none;">#{{ order.id }}</a></td>
+                            <td style="padding:0.75rem 1rem;">{{ order.buyer_name|default:"—" }}{% if order.buyer_phone %}<br><span style="font-size:0.8rem;color:#7f8c8d;">{{ order.buyer_phone }}</span>{% endif %}</td>
+                            <td style="padding:0.75rem 1rem;font-weight:600;">{{ order.amount }} ₽</td>
+                            <td style="padding:0.75rem 1rem;">
+                                {% if order.status == 'CONFIRMED' %}<span class="badge badge-success">✅ Оплачен</span>
+                                {% elif order.status == 'ADVANCE' %}<span class="badge badge-warning">💛 Аванс</span>
+                                {% elif order.status == 'CANCELLED' %}<span class="badge badge-danger">❌ Отменён</span>
+                                {% elif order.status == 'INIT' %}<span class="badge badge-secondary">⏳ Не оплачен</span>
+                                {% else %}<span class="badge badge-secondary">{{ order.status }}</span>{% endif %}
+                            </td>
+                            <td style="padding:0.75rem 1rem;font-size:0.85rem;color:#7f8c8d;">{{ order.created_at|ru_datetime }}</td>
+                            <td style="padding:0.75rem 1rem;"><a href="{% url 'bot_app:crm_order_detail' order.id %}" style="color:#667eea;text-decoration:none;font-size:0.85rem;">Карточка →</a></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" style="padding:1.5rem;text-align:center;color:#7f8c8d;">Заказов пока нет</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Топ кнопок -->
+        <div class="section">
+            <h2>🖱️ Топ нажатых кнопок</h2>
+            {% if top_buttons %}
+            <table>
+                <thead><tr><th>Кнопка</th><th>Callback Data</th><th>Кликов</th></tr></thead>
+                <tbody>
+                    {% for button in top_buttons %}
+                    <tr>
+                        <td><strong>{{ button.name }}</strong></td>
+                        <td><code style="background: #f1f1f1; padding: 2px 6px; border-radius: 4px;">{{ button.callback_data|truncatechars:50 }}</code></td>
+                        <td><span class="badge badge-primary">{{ button.click_count }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">Нет данных о нажатиях кнопок</div>
+            {% endif %}
+        </div>
+        
+        <!-- Два столбца -->
+        <div class="grid-2">
+            <div class="section">
+                <h2>👥 Топ активных пользователей</h2>
+                {% if top_users %}
+                <table>
+                    <thead><tr><th>Пользователь</th><th>События</th></tr></thead>
+                    <tbody>
+                        {% for user in top_users %}
+                        <tr>
+                            <td><strong>{{ user.first_name }} {{ user.last_name }}</strong><br><small style="color: #95a5a6;">@{{ user.tg_username|default:"—" }}</small></td>
+                            <td><span class="badge badge-info">{{ user.events_count }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<div class="empty-state">Нет данных</div>{% endif %}
+            </div>
+            <div class="section">
+                <h2>👨‍💼 Производительность специалистов</h2>
+                {% if specialists_stats %}
+                <table>
+                    <thead><tr><th>Специалист</th><th>Чатов</th><th>Выручка</th></tr></thead>
+                    <tbody>
+                        {% for spec in specialists_stats %}
+                        <tr>
+                            <td><strong>{{ spec.name }}</strong></td>
+                            <td><span class="badge badge-primary">{{ spec.total_chats }}</span></td>
+                            <td><strong>{{ spec.total_revenue }} ₽</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<div class="empty-state">Нет данных</div>{% endif %}
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- МОДАЛКИ -->
+    <!-- Пользователи -->
+    <div id="modal-users" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>👥 Пользователи</h2><button class="modal-close" onclick="closeModal('users')">&times;</button></div>
+            <div class="modal-toolbar">
+                <input type="text" id="search-users" placeholder="🔍 Поиск по имени, телефону, ИНН..." onkeyup="filterTable('users')" style="width: 100%; font-size: 16px; min-height: 44px;">
+                <div class="mobile-actions">
+                    <a href="/admin/bot_app/users/add/" class="btn btn-success">+ Добавить</a>
+                    <a href="/admin/bot_app/users/" class="btn btn-secondary">Открыть в админке</a>
+                </div>
+            </div>
+            <div class="modal-body">
+                <table id="table-users">
+                    <thead><tr><th>ID</th><th>ФИО</th><th>Телефон</th><th>ИНН</th><th>Верифицирован</th><th>Действия</th></tr></thead>
+                    <tbody>
+                        {% for user in all_users %}
+                        <tr>
+                            <td data-label="ID">{{ user.user_id }}</td>
+                            <td data-label="ФИО"><strong>{{ user.first_name }} {{ user.last_name }}</strong></td>
+                            <td data-label="Телефон">{{ user.phone|default:"—" }}</td>
+                            <td data-label="ИНН">{{ user.inn|default:"—" }}</td>
+                            <td data-label="Верифицирован">{% if user.verified_at %}<span class="status-dot green"></span>Да{% else %}<span class="status-dot gray"></span>Нет{% endif %}</td>
+                            <td data-label="Действия"><a href="{% url 'bot_app:crm_client_detail' user.user_id %}" class="action-btn edit">✏️</a></td>
+                        </tr>
+                        {% empty %}<tr><td colspan="6" class="empty-state">Нет пользователей</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Клиенты -->
+    <div id="modal-clients" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>🏢 Клиенты</h2><button class="modal-close" onclick="closeModal('clients')">&times;</button></div>
+            <div class="modal-toolbar">
+                <input type="text" id="search-clients" placeholder="🔍 Поиск по ИНН, названию, телефону..." onkeyup="filterTable('clients')" style="width: 100%; font-size: 16px; min-height: 44px;">
+                <div class="mobile-actions">
+                    <a href="{% url 'bot_app:crm_client_create' %}" class="btn btn-success">+ Добавить клиента</a>
+                    <a href="/crm/" class="btn btn-secondary">Открыть CRM</a>
+                </div>
+            </div>
+            <div class="modal-body">
+                <table id="table-clients">
+                    <thead><tr><th>ID</th><th>ИНН</th><th>Компания</th><th>Телефон</th><th>Email</th><th>Город</th><th>Действия</th></tr></thead>
+                    <tbody>
+                        {% for client in all_clients %}
+                        <tr>
+                            <td data-label="ID">{{ client.id }}</td>
+                            <td data-label="ИНН"><strong>{{ client.inn }}</strong></td>
+                            <td data-label="Компания">{{ client.org_name|default:client.first_name|default:"—" }} {{ client.last_name|default:"" }}</td>
+                            <td data-label="Телефон">{{ client.phone|default:"—" }}</td>
+                            <td data-label="Email">{{ client.email|default:"—" }}</td>
+                            <td data-label="Город">{{ client.city|default:"—" }}</td>
+                            <td data-label="Действия"><a href="/crm/client/{{ client.id }}/" class="action-btn view">👁 Открыть</a></td>
+                        </tr>
+                        {% empty %}<tr><td colspan="7" class="empty-state">Нет клиентов</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Заказы -->
+    <div id="modal-orders" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>🛒 Заказы</h2><button class="modal-close" onclick="closeModal('orders')">&times;</button></div>
+            <div class="modal-toolbar">
+                <input type="text" id="search-orders" placeholder="🔍 Поиск по номеру, покупателю..." onkeyup="filterTable('orders')" style="width: 100%; font-size: 16px; min-height: 44px;">
+                <div class="mobile-actions">
+                    <a href="{% url 'bot_app:crm_orders' %}" class="btn btn-secondary">Все заказы →</a>
+                </div>
+            </div>
+            <div class="modal-body">
+                <table id="table-orders">
+                    <thead><tr><th>Номер</th><th>Статус</th><th>Сумма</th><th>Покупатель</th><th>Телефон</th><th>Дата</th><th>Действия</th></tr></thead>
+                    <tbody>
+                        {% for order in all_orders %}
+                        <tr>
+                            <td data-label="Номер"><a href="{% url 'bot_app:crm_order_detail' order.id %}" style="font-weight:700;color:#667eea;text-decoration:none;">#{{ order.order_id }}</a></td>
+                            <td data-label="Статус">{% if order.status == 'CONFIRMED' %}<span class="badge badge-success">✅ Оплачен</span>{% elif order.status == 'ADVANCE' %}<span class="badge badge-warning">💛 Аванс</span>{% elif order.status == 'CANCELLED' %}<span class="badge badge-danger">❌ Отменён</span>{% elif order.status == 'INIT' %}<span class="badge badge-secondary">⏳ Не оплачен</span>{% else %}<span class="badge badge-secondary">{{ order.status }}</span>{% endif %}</td>
+                            <td data-label="Сумма"><strong>{{ order.amount }} ₽</strong></td>
+                            <td data-label="Покупатель">{{ order.buyer_name|default:"—" }}</td>
+                            <td data-label="Телефон">{{ order.buyer_phone|default:"—" }}</td>
+                            <td data-label="Дата">{{ order.created_at|ru_datetime }}</td>
+                            <td data-label="Действия"><a href="{% url 'bot_app:crm_order_detail' order.id %}" class="action-btn view">👁</a></td>
+                        </tr>
+                        {% empty %}<tr><td colspan="7" class="empty-state">Нет заказов</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Чаты -->
+    <div id="modal-chats" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>💬 Чаты поддержки</h2><button class="modal-close" onclick="closeModal('chats')">&times;</button></div>
+            <div class="modal-toolbar">
+                <input type="text" id="search-chats" placeholder="🔍 Поиск..." onkeyup="filterTable('chats')" style="width: 100%; font-size: 16px; min-height: 44px;">
+                <div class="mobile-actions">
+                    <a href="/admin/bot_app/supportchats/" class="btn btn-secondary">Открыть в админке</a>
+                </div>
+            </div>
+            <div class="modal-body">
+                <table id="table-chats">
+                    <thead><tr><th>ID</th><th>Источник</th><th>Клиент</th><th>Специалист</th><th>Статус</th><th>Категория</th><th>Дата</th><th>Действия</th></tr></thead>
+                    <tbody>
+                        {% for chat in all_chats %}
+                        <tr>
+                            <td data-label="ID">{{ chat.id }}</td>
+                            <td data-label="Источник">{% if chat.tg_user_id and chat.max_user_id %}<span class="badge badge-primary">TG+Max</span>{% elif chat.tg_user_id %}<span class="badge badge-primary">TG</span>{% elif chat.max_user_id %}<span class="badge badge-warning">Max</span>{% else %}<span class="badge badge-secondary">CRM</span>{% endif %}</td>
+                            <td data-label="Клиент">
+                                {% if chat.client_first_name or chat.client_last_name %}<strong>{{ chat.client_first_name|default:"" }} {{ chat.client_last_name|default:"" }}</strong><br>{% endif %}
+                                {% if chat.client_phone %}{{ chat.client_phone }}{% else %}—{% endif %}
+                                {% if chat.client_inn %} / ИНН: {{ chat.client_inn }}{% endif %}
+                            </td>
+                            <td data-label="Специалист">{{ chat.specialist_name|default:"—" }}</td>
+                            <td data-label="Статус">{% if chat.status == 'active' %}<span class="badge badge-success">🟢 Активен</span>{% elif chat.status == 'pending' %}<span class="badge badge-warning">⏳ Ожидает</span>{% elif chat.status == 'closed' %}<span class="badge badge-secondary">✅ Закрыт</span>{% elif chat.status == 'consultation' %}<span class="badge badge-info">💬 Консультация</span>{% else %}<span class="badge">{{ chat.status }}</span>{% endif %}</td>
+                            <td data-label="Категория">{{ chat.category|default:"—" }}</td>
+                            <td data-label="Дата">{{ chat.created_at|ru_datetime }}</td>
+                            <td data-label="Действия">
+                                <button class="action-btn view" onclick="showChatHistory({{ chat.id }})" title="История сообщений ({{ chat.message_count|default:0 }})">💬</button>
+                                <a href="/admin/bot_app/supportchats/{{ chat.id }}/change/" class="action-btn edit" title="Редактировать">✏️</a>
+                            </td>
+                        </tr>
+                        {% empty %}<tr><td colspan="8" class="empty-state">Нет чатов</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Специалисты -->
+    <div id="modal-specialists" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>👨‍💼 Специалисты</h2><button class="modal-close" onclick="closeModal('specialists')">&times;</button></div>
+            <div class="modal-toolbar">
+                <input type="text" id="search-specialists" placeholder="🔍 Поиск по имени, телефону..." onkeyup="filterTable('specialists')" style="width: 100%; font-size: 16px; min-height: 44px;">
+                <div class="mobile-actions">
+                    <a href="{% url 'bot_app:specialists_manage' %}" class="btn btn-success">+ Добавить</a>
+                    <a href="{% url 'bot_app:specialists_manage' %}" class="btn btn-secondary">Открыть</a>
+                </div>
+            </div>
+            <div class="modal-body">
+                <table id="table-specialists">
+                    <thead><tr><th>ID</th><th>Имя</th><th>Профессия</th><th>Телефон</th><th>Telegram</th><th>Статус</th><th>Действия</th></tr></thead>
+                    <tbody>
+                        {% for spec in all_specialists %}
+                        <tr>
+                            <td data-label="ID">{{ spec.id }}</td>
+                            <td data-label="Имя"><strong>{{ spec.name }}</strong></td>
+                            <td data-label="Профессия">{% if spec.profession == 0 %}🧮 Бухгалтер{% elif spec.profession == 1 %}🛠 Техподдержка{% elif spec.profession == 2 %}👔 Директор{% elif spec.profession == 3 %}💼 Консультант{% elif spec.profession == 4 %}📄 Разрешительная документация{% else %}#{{ spec.profession }}{% endif %}</td>
+                            <td data-label="Телефон">{{ spec.phone|default:"—" }}</td>
+                            <td data-label="Telegram">@{{ spec.tg_username|default:"—" }}</td>
+                            <td data-label="Статус">{% if spec.is_active %}<span class="badge badge-success">✅ Активен</span>{% else %}<span class="badge badge-danger">❌ Неактивен</span>{% endif %}</td>
+                            <td data-label="Действия"><a href="/admin/bot_app/specialists/{{ spec.id }}/change/" class="action-btn edit">✏️</a></td>
+                        </tr>
+                        {% empty %}<tr><td colspan="7" class="empty-state">Нет специалистов</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Выручка -->
+    <div id="modal-revenue" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>💰 Финансовая статистика</h2><button class="modal-close" onclick="closeModal('revenue')">&times;</button></div>
+            <div class="modal-body" style="padding: 2rem;">
+                <div class="stats-grid">
+                    <div class="stat-card no-click"><h3>Общая выручка</h3><div class="value" style="color: #2ecc71;">{{ financial.total_revenue|floatformat:0 }} ₽</div></div>
+                    <div class="stat-card no-click"><h3>Выручка за 30 дней</h3><div class="value" style="color: #3498db;">{{ financial.revenue_30d|floatformat:0 }} ₽</div></div>
+                    <div class="stat-card no-click"><h3>Прибыль</h3><div class="value" style="color: #f39c12;">{{ financial.profit|floatformat:0 }} ₽</div></div>
+                    <div class="stat-card no-click"><h3>Средний чек</h3><div class="value" style="color: #9b59b6;">{{ financial.avg_order|floatformat:0 }} ₽</div></div>
+                </div>
+                <div style="margin-top: 2rem; text-align: center;"><a href="/admin/bot_app/orders/?status=paid" class="btn btn-primary">📊 Смотреть оплаченные заказы</a></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- История сообщений чата -->
+    <div id="modal-chat-history" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header"><h2>💬 История сообщений чата #<span id="chat-history-id"></span></h2><button class="modal-close" onclick="closeChatHistory()">&times;</button></div>
+            <div class="modal-body" id="chat-history-body" style="max-height: 400px; overflow-y: auto; padding: 1rem;">
+                <div class="loading-state">Загрузка сообщений...</div>
+            </div>
+            <div class="chat-reply-form" style="padding: 1rem; background: #f8f9fa; border-top: 1px solid #ecf0f1;">
+                <div id="chat-file-preview" style="display:none; background: #e8f0fe; border: 2px solid #667eea; border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; align-items: center; gap: 0.5rem;">
+                    <span id="chat-file-name" style="flex: 1; font-size: 0.85rem; color: #667eea; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></span>
+                    <span id="chat-file-size" style="font-size: 0.75rem; color: #95a5a6; white-space: nowrap;"></span>
+                    <button onclick="removeChatFile()" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 1.2rem; padding: 0 0.25rem;">&times;</button>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                    <button onclick="document.getElementById('chat-file-input').click()" title="Прикрепить файл" style="background: none; border: 2px solid #ecf0f1; color: #667eea; width: 44px; height: 44px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.3s;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                    </button>
+                    <input type="file" id="chat-file-input" style="display:none" onchange="onChatFileSelected(this)">
+                    <textarea id="chat-reply-text" placeholder="Введите ответ..." style="flex: 1; padding: 0.75rem; border: 2px solid #ecf0f1; border-radius: 8px; resize: none; font-family: inherit; font-size: 0.95rem;" rows="2"></textarea>
+                    <button id="chat-reply-btn" onclick="handleChatSend()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; white-space: nowrap;">Отправить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка для просмотра изображений в чате -->
+    <div class="chat-image-modal" id="chat-img-modal" onclick="closeChatImage()">
+        <button class="close-img" onclick="closeChatImage()">&times;</button>
+        <img id="chat-modal-img" src="" alt="">
+    </div>
+
+    <style>
+        .chat-messages { display: flex; flex-direction: column; gap: 0.5rem; }
+        .chat-message { padding: 0.75rem 1rem; border-radius: 12px; max-width: 80%; }
+        .chat-message.client { background: #e3f2fd; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .chat-message.specialist { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-message .sender { font-size: 0.75rem; color: #666; margin-bottom: 0.25rem; }
+        .chat-message.specialist .sender { color: rgba(255,255,255,0.8); }
+        .chat-message .text { word-wrap: break-word; }
+        .chat-message .time { font-size: 0.7rem; color: #999; text-align: right; margin-top: 0.25rem; }
+        .chat-message.specialist .time { color: rgba(255,255,255,0.7); }
+        .empty-chat { text-align: center; color: #999; padding: 2rem; }
+        #chat-reply-text:focus { outline: none; border-color: #667eea; }
+        #chat-reply-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+        #chat-reply-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .chat-msg-image { max-width: 100%; border-radius: 8px; margin-bottom: 0.25rem; cursor: pointer; }
+        .chat-msg-image:hover { opacity: 0.9; }
+        .chat-msg-video { max-width: 100%; border-radius: 8px; margin-bottom: 0.25rem; }
+        .chat-msg-file { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: inherit; padding: 0.25rem 0; }
+        .chat-message.specialist .chat-msg-file { color: white; }
+        .chat-msg-file:hover { opacity: 0.8; }
+        .chat-msg-file .f-icon { font-size: 1.2rem; }
+        .chat-msg-file .f-name { font-weight: 600; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+        .chat-msg-file .f-size { font-size: 0.7rem; opacity: 0.7; }
+        .chat-image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; cursor: pointer; }
+        .chat-image-modal.active { display: flex; }
+        .chat-image-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+        .chat-image-modal .close-img { position: absolute; top: 1rem; right: 1.5rem; color: white; font-size: 2rem; cursor: pointer; background: none; border: none; }
+    </style>
+
+    <script>
+        function getCsrfToken() {
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? match[1] : '';
+        }
+        function openModal(type) { document.getElementById('modal-' + type).classList.add('active'); document.body.style.overflow = 'hidden'; }
+        function closeModal(type) { document.getElementById('modal-' + type).classList.remove('active'); document.body.style.overflow = 'auto'; }
+        document.querySelectorAll('.modal').forEach(modal => { modal.addEventListener('click', function(e) { if (e.target === this) { this.classList.remove('active'); document.body.style.overflow = 'auto'; } }); });
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { document.querySelectorAll('.modal.active').forEach(modal => { modal.classList.remove('active'); }); document.body.style.overflow = 'auto'; } });
+        function filterTable(type) { const input = document.getElementById('search-' + type); const filter = input.value.toLowerCase(); const table = document.getElementById('table-' + type); const rows = table.getElementsByTagName('tr'); for (let i = 1; i < rows.length; i++) { const cells = rows[i].getElementsByTagName('td'); let found = false; for (let j = 0; j < cells.length; j++) { if (cells[j].textContent.toLowerCase().includes(filter)) { found = true; break; } } rows[i].style.display = found ? '' : 'none'; } }
+
+        let currentChatId = null;
+
+        function showChatHistory(chatId) {
+            currentChatId = chatId;
+            document.getElementById('chat-history-id').textContent = chatId;
+            document.getElementById('chat-history-body').innerHTML = '<div class="loading-state">Загрузка сообщений...</div>';
+            document.getElementById('chat-reply-text').value = '';
+            document.getElementById('modal-chat-history').classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            loadChatMessages(chatId);
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' Б';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+        }
+
+        function renderMsgContent(msg) {
+            let html = '';
+            const hasFile = msg.file_id;
+            const mime = msg.file_mime || '';
+            const isImage = mime.startsWith('image/');
+            const isVideo = mime.startsWith('video/');
+
+            if (hasFile && isImage) {
+                html += `<img class="chat-msg-image" src="${msg.file_url}" alt="${escapeHtml(msg.file_name)}" onclick="openChatImage(this.src)" loading="lazy">`;
+            } else if (hasFile && isVideo) {
+                html += `<video class="chat-msg-video" controls preload="metadata"><source src="${msg.file_url}" type="${mime}"></video>`;
+            } else if (hasFile) {
+                html += `<a class="chat-msg-file" href="${msg.file_url}" target="_blank" download>
+                    <span class="f-icon">&#128196;</span>
+                    <span class="f-name">${escapeHtml(msg.file_name)}</span>
+                    <span class="f-size">${formatFileSize(msg.file_size)}</span>
+                </a>`;
+            }
+
+            // Показываем текст если это не auto-caption файла
+            const autoCaption = hasFile ? ('\uD83D\uDCCE ' + msg.file_name) : '';
+            if (!hasFile || (msg.text && msg.text !== autoCaption)) {
+                html += `<div class="text">${escapeHtml(msg.text)}</div>`;
+            }
+            return html;
+        }
+
+        function loadChatMessages(chatId) {
+            fetch('/api/chat-messages/' + chatId + '/')
+                .then(response => response.json())
+                .then(data => {
+                    const body = document.getElementById('chat-history-body');
+                    if (data.messages && data.messages.length > 0) {
+                        let html = '<div class="chat-messages" id="chat-messages-list">';
+                        data.messages.forEach(msg => {
+                            const isClient = msg.sender === 'client' || msg.sender === 0;
+                            html += `<div class="chat-message ${isClient ? 'client' : 'specialist'}">
+                                <div class="sender">${isClient ? '👤 Клиент' : '👨‍💼 Специалист'}</div>
+                                ${renderMsgContent(msg)}
+                                <div class="time">${escapeHtml(msg.created_at_display || msg.created_at || '')}</div>
+                            </div>`;
+                        });
+                        html += '</div>';
+                        body.innerHTML = html;
+                        body.scrollTop = body.scrollHeight;
+                    } else {
+                        body.innerHTML = '<div class="empty-chat" id="chat-messages-list">Нет сообщений в этом чате</div>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('chat-history-body').innerHTML = '<div class="empty-chat">Ошибка загрузки сообщений</div>';
+                });
+        }
+
+        let chatSelectedFile = null;
+
+        function onChatFileSelected(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 25 * 1024 * 1024) {
+                alert('Файл слишком большой (максимум 25 МБ)');
+                input.value = '';
+                return;
+            }
+            chatSelectedFile = file;
+            document.getElementById('chat-file-name').textContent = file.name;
+            document.getElementById('chat-file-size').textContent = formatFileSize(file.size);
+            document.getElementById('chat-file-preview').style.display = 'flex';
+        }
+
+        function removeChatFile() {
+            chatSelectedFile = null;
+            document.getElementById('chat-file-input').value = '';
+            document.getElementById('chat-file-preview').style.display = 'none';
+        }
+
+        function handleChatSend() {
+            if (chatSelectedFile) {
+                uploadChatFile();
+            } else {
+                sendChatReply();
+            }
+        }
+
+        function uploadChatFile() {
+            if (!chatSelectedFile || !currentChatId) return;
+            const btn = document.getElementById('chat-reply-btn');
+            btn.disabled = true;
+            btn.textContent = 'Загрузка...';
+
+            const formData = new FormData();
+            formData.append('file', chatSelectedFile);
+            formData.append('text', document.getElementById('chat-reply-text').value.trim());
+
+            fetch('/api/chat/' + currentChatId + '/upload/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCsrfToken() },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('chat-reply-text').value = '';
+                    removeChatFile();
+                    loadChatMessages(currentChatId);
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                alert('Ошибка сети: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Отправить';
+            });
+        }
+
+        function sendChatReply() {
+            const text = document.getElementById('chat-reply-text').value.trim();
+            if (!text || !currentChatId) return;
+
+            const btn = document.getElementById('chat-reply-btn');
+            btn.disabled = true;
+            btn.textContent = 'Отправка...';
+
+            fetch('/api/chat/' + currentChatId + '/send/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ text: text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('chat-reply-text').value = '';
+                    loadChatMessages(currentChatId);
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                alert('Ошибка сети: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Отправить';
+            });
+        }
+
+        // Просмотр изображений
+        function openChatImage(src) {
+            document.getElementById('chat-modal-img').src = src;
+            document.getElementById('chat-img-modal').classList.add('active');
+        }
+        function closeChatImage() {
+            document.getElementById('chat-img-modal').classList.remove('active');
+        }
+
+        // Drag & Drop на модал чата
+        const chatHistoryBody = document.getElementById('chat-history-body');
+        const chatModal = document.getElementById('modal-chat-history');
+        chatModal.addEventListener('dragover', function(e) { e.preventDefault(); });
+        chatModal.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (e.dataTransfer.files.length > 0) {
+                const dt = new DataTransfer();
+                dt.items.add(e.dataTransfer.files[0]);
+                document.getElementById('chat-file-input').files = dt.files;
+                onChatFileSelected(document.getElementById('chat-file-input'));
+            }
+        });
+
+        // Вставка из буфера (Ctrl+V) когда модал открыт
+        document.addEventListener('paste', function(e) {
+            if (!document.getElementById('modal-chat-history').classList.contains('active')) return;
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file') {
+                    e.preventDefault();
+                    const file = items[i].getAsFile();
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    document.getElementById('chat-file-input').files = dt.files;
+                    onChatFileSelected(document.getElementById('chat-file-input'));
+                    break;
+                }
+            }
+        });
+
+        // Отправка по Enter (Shift+Enter для новой строки)
+        document.getElementById('chat-reply-text').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleChatSend();
+            }
+        });
+
+        function closeChatHistory() {
+            document.getElementById('modal-chat-history').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            currentChatId = null;
+            removeChatFile();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // === Уведомления: бейдж с количеством ===
+        function updateNotifBadge() {
+            fetch('/api/notifications/count/')
+                .then(r => r.json())
+                .then(data => {
+                    const badge = document.getElementById('notifBadge');
+                    const bell = document.getElementById('notifBell');
+                    if (data.total > 0) {
+                        badge.textContent = data.total > 99 ? '99+' : data.total;
+                        badge.style.display = 'block';
+                        if (data.urgent > 0) {
+                            badge.style.background = '#e74c3c';
+                            bell.classList.add('has-urgent');
+                        } else {
+                            badge.style.background = '#f39c12';
+                            bell.classList.remove('has-urgent');
+                        }
+                    } else {
+                        badge.style.display = 'none';
+                        bell.classList.remove('has-urgent');
+                    }
+                })
+                .catch(() => {});
+        }
+        updateNotifBadge();
+        setInterval(updateNotifBadge, 30000);
+
+        // === Карусель предупреждений ===
+        (function() {
+            const carousel = document.getElementById('alertsCarousel');
+            if (!carousel) return;
+            const slides = carousel.querySelectorAll('.carousel-slide');
+            const dotsContainer = document.getElementById('carouselDots');
+            if (slides.length === 0) return;
+
+            let current = 0;
+            let interval;
+
+            // Создаём точки
+            slides.forEach((_, i) => {
+                const dot = document.createElement('button');
+                dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+                dot.onclick = () => goTo(i);
+                dotsContainer.appendChild(dot);
+            });
+
+            function goTo(index) {
+                slides[current].classList.remove('active');
+                dotsContainer.children[current].classList.remove('active');
+                current = index;
+                slides[current].classList.add('active');
+                dotsContainer.children[current].classList.add('active');
+                resetInterval();
+            }
+
+            function next() {
+                goTo((current + 1) % slides.length);
+            }
+
+            function resetInterval() {
+                clearInterval(interval);
+                interval = setInterval(next, 5000);
+            }
+
+            // Активируем первый слайд
+            slides[0].classList.add('active');
+            if (slides.length > 1) {
+                interval = setInterval(next, 5000);
+            } else {
+                dotsContainer.style.display = 'none';
+            }
+        })();
+    </script>
+    </div><!-- /main-content -->
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

@@ -1,0 +1,449 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Мои чаты - {{ user.name }}</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_mobile_base_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd6;
+            --color-success: #2ecc71;
+            --color-danger: #e74c3c;
+            --color-warning: #f39c12;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--color-bg); color: var(--color-text); }
+        .main-content { margin-left: 260px; min-height: 100vh; }
+        .page-header { background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%); color: white; padding: var(--spacing-lg) var(--spacing-xl); box-shadow: var(--shadow-sm); padding-top: max(env(safe-area-inset-top), var(--spacing-lg)); }
+        .page-header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: var(--spacing-xs); }
+        .page-header .subtitle { opacity: 0.9; font-size: 0.95rem; }
+        .container { max-width: 1200px; margin: 0 auto; padding: var(--spacing-xl); }
+
+        /* Статистика */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--spacing-md); margin-bottom: var(--spacing-xl); }
+        .stat-box { background: var(--color-card-bg); padding: var(--spacing-lg); border-radius: var(--radius-md); text-align: center; box-shadow: var(--shadow-sm); cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
+        .stat-box:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .stat-box.active { border-color: var(--color-primary); }
+        .stat-box .value { font-size: 2rem; font-weight: 700; }
+        .stat-box .label { font-size: 0.9rem; color: var(--color-text-muted); margin-top: var(--spacing-xs); }
+        .stat-box.completed .value { color: var(--color-success); }
+        .stat-box.in-progress .value { color: var(--color-primary); }
+        .stat-box.overdue .value { color: var(--color-danger); }
+        .stat-box.pending .value { color: #d63031; }
+        .stat-box.pending {
+            border-color: #ffd2d2;
+            background: linear-gradient(180deg, #fff6f6 0%, #fff 100%);
+        }
+        .stat-box.pending .label {
+            color: #b93a3a;
+            font-weight: 600;
+        }
+
+        /* Секция */
+        .section { background: var(--color-card-bg); padding: var(--spacing-xl); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+        .section h2 { font-size: 1.5rem; margin-bottom: var(--spacing-lg); color: var(--color-text); border-bottom: 2px solid var(--color-border-light); padding-bottom: var(--spacing-sm); }
+        .task-overview {
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border-light);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+        .task-overview-title { font-weight: 700; }
+        .task-overview-stats { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+        .task-chip {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #3f51b5;
+            font-weight: 600;
+        }
+        .task-chip.new {
+            background: #eaf7ef;
+            color: #1f7a46;
+        }
+        .task-clients-note {
+            margin-top: 0.4rem;
+            font-size: 0.82rem;
+            color: var(--color-text-muted);
+        }
+
+        /* Табы категорий */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Карточки чатов */
+        .chats-list { display: flex; flex-direction: column; gap: var(--spacing-md); }
+        .chat-card { background: var(--color-card-hover); border-radius: var(--radius-md); padding: var(--spacing-lg); display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; border-left: 4px solid var(--color-primary); }
+        .chat-card:hover { transform: translateX(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .chat-card.pending { border-left-color: var(--color-warning); }
+        .chat-card.pending-urgent { border-left-color: #e74c3c; box-shadow: inset 0 0 0 1px rgba(231, 76, 60, 0.15); }
+        .chat-card.active { border-left-color: var(--color-success); }
+        .chat-card.closed { border-left-color: #95a5a6; }
+        .chat-card.overdue-marker { position: relative; }
+        .chat-card.overdue-marker::after {
+            content: 'SLA';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--color-danger);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .chat-info h3 { font-size: 1.1rem; margin-bottom: var(--spacing-xs); color: var(--color-text); }
+        .chat-info .meta { font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: var(--spacing-xs); display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .urgent-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+            background: #fdecec;
+            color: #c0392b;
+            font-size: 0.72rem;
+            font-weight: 700;
+            border: 1px solid #f5c6cb;
+        }
+        .pending-alert {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.75rem 0.9rem;
+            border-radius: 10px;
+            border: 1px solid #f5c6cb;
+            background: #fff5f5;
+            color: #a11f1f;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        .chat-info .last-message { font-size: 0.9rem; color: #95a5a6; font-style: italic; max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .btn { padding: var(--spacing-sm) var(--spacing-lg); min-height: var(--touch-target-min); border: none; border-radius: var(--radius-sm); font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-primary:hover { background: var(--color-primary-dark); }
+
+        .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-success { background: #d4edda; color: #27ae60; }
+        .badge-warning { background: #fff3cd; color: #f39c12; }
+        .badge-danger { background: #f8d7da; color: #c0392b; }
+        .badge-secondary { background: #e9ecef; color: #6c757d; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+
+        .empty-state { text-align: center; padding: 3rem; color: #95a5a6; font-size: 1.1rem; }
+
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0; }
+            .container { padding: var(--spacing-md); }
+            .stats-row { grid-template-columns: 1fr 1fr; gap: var(--spacing-xs); }
+            .stat-box { padding: var(--spacing-sm); }
+            .stat-box .value { font-size: 1.4rem; }
+            .stat-box .label { font-size: 0.75rem; }
+            .section { padding: var(--spacing-md); }
+            .chat-card { flex-direction: column; align-items: flex-start; gap: var(--spacing-sm); padding: var(--spacing-md); }
+            .chat-card:hover { transform: none; }
+            .chat-info .last-message { max-width: 100%; white-space: normal; }
+            .chat-actions { width: 100%; }
+            .chat-actions .btn { width: 100%; }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border-light: #2c3e50;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='specialist_panel' %}
+
+    <div class="main-content">
+    <div class="page-header">
+        <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+        <h1>Мои чаты</h1>
+        <div class="subtitle">Панель специалиста</div>
+    </div>
+
+    <div class="container">
+        <!-- Статистика -->
+        <div class="stats-row">
+            <div class="stat-box completed" id="tab-completed" onclick="switchTab('completed')">
+                <div class="value">{{ completed_count }}</div>
+                <div class="label">Закрытые чаты</div>
+            </div>
+            <div class="stat-box in-progress active" id="tab-in-progress" onclick="switchTab('in-progress')">
+                <div class="value">{{ in_progress_count }}</div>
+                <div class="label">Чаты в работе</div>
+            </div>
+            <div class="stat-box overdue" id="tab-overdue" onclick="switchTab('overdue')">
+                <div class="value">{{ overdue_count }}</div>
+                <div class="label">Просроченные чаты</div>
+            </div>
+            <div class="stat-box pending" id="tab-pending" onclick="switchTab('pending')">
+                <div class="value">🚨 {{ pending_count|default:0 }}</div>
+                <div class="label">Чаты ожидают принятия</div>
+            </div>
+        </div>
+
+        <div class="task-overview">
+            <div>
+                <div class="task-overview-title">Задачи специалиста</div>
+                <div style="font-size:0.85rem;color:var(--color-text-muted);">Работа с поручениями директора — только в разделе «Мои задачи».</div>
+                <div class="task-clients-note">
+                    Клиенты из задач «В работе»: <strong>{{ active_task_clients_count|default:0 }}</strong> ·
+                    <a href="{% url 'bot_app:crm_clients' %}" style="color:var(--color-primary);text-decoration:none;">Мои клиенты</a>
+                </div>
+            </div>
+            <div class="task-overview-stats">
+                <span class="task-chip">В работе: {{ task_summary.in_progress|default:0 }}</span>
+                <span class="task-chip">Выполненные: {{ task_summary.done|default:0 }}</span>
+                {% if task_summary.awaiting %}
+                <span class="task-chip new">Ожидают: {{ task_summary.awaiting }}</span>
+                {% endif %}
+                <a href="{% url 'bot_app:crm_tasks' %}?status=in_progress" class="btn btn-primary">Открыть мои задачи</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <!-- Таб: В работе -->
+            <div class="tab-content active" id="content-in-progress">
+                <h2>В работе</h2>
+                {% if pending_count %}
+                <div class="pending-alert">Чатов, ожидающих принятия: {{ pending_count }}.</div>
+                {% endif %}
+                {% if in_progress_chats %}
+                <div class="chats-list">
+                    {% for chat in in_progress_chats %}
+                    <div class="chat-card {{ chat.status }}{% if chat.status == 'pending' %} pending-urgent{% endif %}{% if chat.wait_seconds > 600 %} overdue-marker{% endif %}">
+                        <div class="chat-info">
+                            <h3>
+                                {% if chat.client_first_name or chat.client_last_name %}
+                                    {{ chat.client_first_name }} {{ chat.client_last_name }}
+                                {% else %}
+                                    Клиент
+                                {% endif %}
+                            </h3>
+                            <div class="meta">
+                                <span class="badge {% if chat.status == 'pending' %}badge-warning{% elif chat.status == 'active' %}badge-success{% elif chat.status == 'consultation' %}badge-info{% else %}badge-secondary{% endif %}">
+                                    {% if chat.status == 'pending' %}Ожидает{% elif chat.status == 'active' %}Активный{% elif chat.status == 'consultation' %}Консультация{% else %}{{ chat.status }}{% endif %}
+                                </span>
+                                {% if chat.status == 'pending' %}<span class="urgent-pill">🚨 Срочно принять</span>{% endif %}
+                                {% if chat.source == 'telegram' %}<span class="badge" style="background:#e1f0fa;color:#1a8cd8;font-size:0.7rem;">TG</span>{% elif chat.source == 'max' %}<span class="badge" style="background:#fff0e6;color:#e67e22;font-size:0.7rem;">MAX</span>{% endif %}
+                                {% if chat.category %}<span style="color: #95a5a6;">{{ chat.category }}</span>{% endif %}
+                                <span style="color: #95a5a6;">{{ chat.created_at|ru_datetime }}</span>
+                                <span style="color: var(--color-primary);">({{ chat.message_count }} сообщ.)</span>
+                            </div>
+                            {% if chat.last_message %}
+                            <div class="last-message">{{ chat.last_message|truncatechars:80 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="chat-actions">
+                            <a href="{% url 'bot_app:specialist_chat' chat.id %}" class="btn btn-primary">Открыть чат</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                    <div class="empty-state">
+                        <p>Нет активных чатов</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Таб: Завершённые чаты -->
+            <div class="tab-content" id="content-completed">
+                <h2>Завершённые чаты</h2>
+                {% if completed_chats %}
+                <div class="chats-list">
+                    {% for chat in completed_chats %}
+                    <div class="chat-card closed{% if chat.wait_seconds > 600 %} overdue-marker{% endif %}">
+                        <div class="chat-info">
+                            <h3>
+                                {% if chat.client_first_name or chat.client_last_name %}
+                                    {{ chat.client_first_name }} {{ chat.client_last_name }}
+                                {% else %}
+                                    Клиент
+                                {% endif %}
+                            </h3>
+                            <div class="meta">
+                                <span class="badge badge-secondary">Завершён</span>
+                                {% if chat.source == 'telegram' %}<span class="badge" style="background:#e1f0fa;color:#1a8cd8;font-size:0.7rem;">TG</span>{% elif chat.source == 'max' %}<span class="badge" style="background:#fff0e6;color:#e67e22;font-size:0.7rem;">MAX</span>{% endif %}
+                                {% if chat.category %}<span style="color: #95a5a6;">{{ chat.category }}</span>{% endif %}
+                                <span style="color: #95a5a6;">{{ chat.created_at|ru_datetime }}</span>
+                                <span style="color: var(--color-primary);">({{ chat.message_count }} сообщ.)</span>
+                            </div>
+                            {% if chat.last_message %}
+                            <div class="last-message">{{ chat.last_message|truncatechars:80 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="chat-actions">
+                            <a href="{% url 'bot_app:specialist_chat' chat.id %}" class="btn btn-primary">Открыть чат</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <p>Нет завершённых чатов</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Таб: Просроченные -->
+            <div class="tab-content" id="content-overdue">
+                <h2>Просроченные</h2>
+                {% if overdue_chats %}
+                <div class="chats-list">
+                    {% for chat in overdue_chats %}
+                    <div class="chat-card {{ chat.status }} overdue-marker">
+                        <div class="chat-info">
+                            <h3>
+                                {% if chat.client_first_name or chat.client_last_name %}
+                                    {{ chat.client_first_name }} {{ chat.client_last_name }}
+                                {% else %}
+                                    Клиент
+                                {% endif %}
+                            </h3>
+                            <div class="meta">
+                                <span class="badge {% if chat.status == 'closed' %}badge-secondary{% elif chat.status == 'pending' %}badge-warning{% elif chat.status == 'active' %}badge-success{% elif chat.status == 'consultation' %}badge-info{% else %}badge-secondary{% endif %}">
+                                    {% if chat.status == 'pending' %}Ожидает{% elif chat.status == 'active' %}Активный{% elif chat.status == 'consultation' %}Консультация{% elif chat.status == 'closed' %}Завершён{% else %}{{ chat.status }}{% endif %}
+                                </span>
+                                <span class="badge badge-danger">Просрочен</span>
+                                {% if chat.source == 'telegram' %}<span class="badge" style="background:#e1f0fa;color:#1a8cd8;font-size:0.7rem;">TG</span>{% elif chat.source == 'max' %}<span class="badge" style="background:#fff0e6;color:#e67e22;font-size:0.7rem;">MAX</span>{% endif %}
+                                {% if chat.category %}<span style="color: #95a5a6;">{{ chat.category }}</span>{% endif %}
+                                <span style="color: #95a5a6;">{{ chat.created_at|ru_datetime }}</span>
+                                <span style="color: var(--color-primary);">({{ chat.message_count }} сообщ.)</span>
+                            </div>
+                            {% if chat.last_message %}
+                            <div class="last-message">{{ chat.last_message|truncatechars:80 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="chat-actions">
+                            <a href="{% url 'bot_app:specialist_chat' chat.id %}" class="btn btn-primary">Открыть чат</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <p>Нет просроченных заявок</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Таб: Ожидают принятия -->
+            <div class="tab-content" id="content-pending">
+                <h2>Ожидают принятия</h2>
+                {% if pending_chats %}
+                <div class="chats-list">
+                    {% for chat in pending_chats %}
+                    <div class="chat-card pending pending-urgent{% if chat.wait_seconds > 600 %} overdue-marker{% endif %}">
+                        <div class="chat-info">
+                            <h3>
+                                {% if chat.client_first_name or chat.client_last_name %}
+                                    {{ chat.client_first_name }} {{ chat.client_last_name }}
+                                {% else %}
+                                    Клиент
+                                {% endif %}
+                            </h3>
+                            <div class="meta">
+                                <span class="badge badge-warning">Ожидает</span>
+                                <span class="urgent-pill">🚨 Срочно принять</span>
+                                {% if chat.source == 'telegram' %}<span class="badge" style="background:#e1f0fa;color:#1a8cd8;font-size:0.7rem;">TG</span>{% elif chat.source == 'max' %}<span class="badge" style="background:#fff0e6;color:#e67e22;font-size:0.7rem;">MAX</span>{% endif %}
+                                {% if chat.category %}<span style="color: #95a5a6;">{{ chat.category }}</span>{% endif %}
+                                <span style="color: #95a5a6;">{{ chat.created_at|ru_datetime }}</span>
+                                <span style="color: var(--color-primary);">({{ chat.message_count }} сообщ.)</span>
+                            </div>
+                            {% if chat.last_message %}
+                            <div class="last-message">{{ chat.last_message|truncatechars:80 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="chat-actions">
+                            <a href="{% url 'bot_app:specialist_chat' chat.id %}" class="btn btn-primary">Открыть чат</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <p>Нет заявок, ожидающих принятия</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    </div><!-- /main-content -->
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+    <script>
+        const SPECIALIST_PANEL_ACTIVE_TAB_KEY = 'specialist_panel_active_tab';
+        const SPECIALIST_PANEL_AUTO_REFRESH_MS = 10000;
+
+        function switchTab(tab) {
+            // Убираем active со всех stat-box и tab-content
+            document.querySelectorAll('.stat-box').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+
+            // Активируем выбранный
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.getElementById('content-' + tab).classList.add('active');
+            localStorage.setItem(SPECIALIST_PANEL_ACTIVE_TAB_KEY, tab);
+        }
+
+        function restoreTabAfterReload() {
+            const savedTab = localStorage.getItem(SPECIALIST_PANEL_ACTIVE_TAB_KEY);
+            if (!savedTab) return;
+            const tabEl = document.getElementById('tab-' + savedTab);
+            const contentEl = document.getElementById('content-' + savedTab);
+            if (!tabEl || !contentEl) return;
+            switchTab(savedTab);
+        }
+
+        function setupAutoRefresh() {
+            setInterval(() => {
+                // Не дёргаем перезагрузку в фоне вкладки, чтобы не мешать работе браузера.
+                if (document.hidden) return;
+                window.location.reload();
+            }, SPECIALIST_PANEL_AUTO_REFRESH_MS);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreTabAfterReload();
+            setupAutoRefresh();
+        });
+    </script>
+</body>
+</html>

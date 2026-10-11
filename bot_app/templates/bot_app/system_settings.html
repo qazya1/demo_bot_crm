@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Настройки системы - CRM Бот</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_mobile_base_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd6;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+        }
+
+        .main-content { margin-left: 260px; min-height: 100vh; background: var(--color-bg); }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
+            color: white;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+            padding-top: max(env(safe-area-inset-top), var(--spacing-lg));
+        }
+        .page-header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: var(--spacing-sm); }
+        .page-header .subtitle { opacity: 0.9; }
+        .container { max-width: 1400px; margin: 0 auto; padding: var(--spacing-xl); }
+        .section {
+            background: var(--color-card-bg);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 2rem;
+        }
+        .section h2 { font-size: 1.5rem; margin-bottom: var(--spacing-lg); color: var(--color-text); border-bottom: 2px solid var(--color-border-light); padding-bottom: var(--spacing-sm); }
+        .alert { padding: var(--spacing-md); border-radius: var(--radius-sm); margin-bottom: var(--spacing-md); border-left: 4px solid; }
+        .alert-success { background: #d4edda; border-left-color: #27ae60; color: #155724; }
+        .alert-danger { background: #f8d7da; border-left-color: #e74c3c; color: #721c24; }
+        .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: var(--spacing-lg); }
+        .setting-card { border: 1px solid var(--color-border-light); border-radius: var(--radius-md); padding: var(--spacing-lg); background: var(--color-card-bg); }
+        .setting-header { display: flex; justify-content: space-between; gap: var(--spacing-sm); align-items: flex-start; margin-bottom: var(--spacing-md); }
+        .setting-name { font-size: 1rem; font-weight: 700; color: var(--color-text); word-break: break-word; }
+        .setting-type { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: #e3e8ff; color: #667eea; white-space: nowrap; }
+        .setting-description { color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.5; margin-bottom: var(--spacing-md); min-height: 2.8em; }
+        .setting-meta { font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: var(--spacing-md); }
+        .setting-form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: var(--spacing-sm); color: var(--color-text); }
+        .setting-form input[type="number"], .setting-form textarea { width: 100%; padding: var(--spacing-sm) var(--spacing-md); border: 2px solid var(--color-border-light); border-radius: var(--radius-sm); font-size: 0.95rem; transition: border-color 0.2s; font-family: inherit; min-height: var(--touch-target-min); }
+        .setting-form input[type="number"]:focus, .setting-form textarea:focus { outline: none; border-color: var(--color-primary); }
+        .setting-form textarea { min-height: 120px; resize: vertical; }
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-primary:hover { background: var(--color-primary-dark); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-secondary { background: var(--color-text-muted); color: white; }
+        .btn-secondary:hover { filter: brightness(0.9); }
+        .empty-state { color: var(--color-text-muted); text-align: center; padding: 3rem 1rem; }
+
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0; }
+            .page-header { padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm); flex-wrap: wrap; }
+            .page-header h1 { font-size: 1.25rem; margin-bottom: 0; }
+            .page-header .subtitle { display: none; }
+            .container { padding: var(--spacing-md); }
+            .section { padding: var(--spacing-md); }
+            .settings-grid { grid-template-columns: 1fr; }
+            .setting-form input[type="number"], .setting-form textarea { font-size: 16px; }
+        }
+
+        @media (max-width: 480px) {
+            .page-header h1 { font-size: 1.1rem; }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .setting-card {
+                background: var(--color-card-hover);
+                border-color: var(--color-border);
+            }
+            .setting-form input[type="number"], .setting-form textarea {
+                background: var(--color-card-hover);
+                color: var(--color-text);
+                border-color: var(--color-border);
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn-primary:hover, .btn-secondary:hover {
+                filter: none;
+            }
+            .btn-primary:active, .btn-secondary:active {
+                transform: scale(0.98);
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='system_settings' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div>
+                <h1>⚙️ Настройки системы</h1>
+                <div class="subtitle">Директорские бизнес-параметры, которые можно менять без правки кода</div>
+            </div>
+        </div>
+
+        <div class="container">
+            {% if success %}
+            <div class="alert alert-success">Настройка успешно сохранена.</div>
+            {% endif %}
+            {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+
+            <div class="section">
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+                    <a href="{% url 'bot_app:system_settings' %}" class="btn btn-primary">Общие настройки</a>
+                    <a href="{% url 'bot_app:external_products' %}?tab=vseofd" class="btn btn-secondary">Продукты со ВсеОФД</a>
+                    <a href="{% url 'bot_app:external_products' %}?tab=shop" class="btn btn-secondary">Наш магазин</a>
+                </div>
+                <h2>Доступные настройки</h2>
+                {% if settings_rows %}
+                <div class="settings-grid">
+                    {% for item in settings_rows %}
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <div class="setting-name">{{ item.name }}</div>
+                            <span class="setting-type">{{ item.value_type|upper }}</span>
+                        </div>
+                        <div class="setting-description">{{ item.description|default:"Описание пока не заполнено." }}</div>
+                        <div class="setting-meta">
+                            Последнее обновление: {{ item.updated_at|date:"d.m.Y H:i" }}{% if item.updated_by_name %} · {{ item.updated_by_name }}{% endif %}
+                        </div>
+                        <form method="post" class="setting-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="setting_name" value="{{ item.name }}">
+                            <input type="hidden" name="value_type" value="{{ item.value_type }}">
+                            {% if item.value_type == 'number' %}
+                                <label for="num_{{ forloop.counter }}">Числовое значение</label>
+                                <input id="num_{{ forloop.counter }}" type="number" step="0.0001" name="number_value" value="{{ item.number_value_display }}" required>
+                            {% else %}
+                                <label for="txt_{{ forloop.counter }}">Текстовое значение</label>
+                                <textarea id="txt_{{ forloop.counter }}" name="char_value" required>{{ item.char_value|default:"" }}</textarea>
+                            {% endif %}
+                            <div style="margin-top: 1rem;">
+                                <button type="submit" class="btn btn-primary">Сохранить</button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">Настройки ещё не созданы.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

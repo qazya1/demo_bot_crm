@@ -1,0 +1,341 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Клиенты партнёра</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        .partner-page {
+            width: min(1460px, 100%);
+            margin: 0 auto;
+            padding: 1.25rem clamp(1rem, 2vw, 2rem) 2rem;
+            display: grid;
+            gap: 1rem;
+        }
+
+        .page-hero {
+            background: linear-gradient(135deg, #ffffff 0%, #f7f9ff 100%);
+            border: 1px solid #e8ecf7;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            padding: 1.4rem 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .hero-title { font-size: clamp(1.4rem, 2vw, 1.95rem); font-weight: 800; }
+        .hero-subtitle { color: #5f6f84; margin-top: .35rem; font-size: .98rem; }
+        .hero-stats {
+            margin-top: .7rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: .45rem;
+            color: #344054;
+            font-size: .84rem;
+        }
+
+        .hero-chip {
+            background: #eef3ff;
+            border: 1px solid #dde7ff;
+            color: #284ea3;
+            padding: .3rem .62rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .btn.btn-hero {
+            padding: .72rem 1.05rem;
+            border-radius: 10px;
+            font-size: .92rem;
+            box-shadow: 0 6px 18px rgba(102, 126, 234, .28);
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: .85rem;
+        }
+
+        .kpi {
+            background: #fff;
+            border: 1px solid #e7ebf5;
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, .06);
+            padding: .95rem 1rem;
+            display: grid;
+            gap: .35rem;
+        }
+
+        .kpi-top { display:flex; align-items:center; gap:.48rem; }
+        .kpi-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            display: grid;
+            place-items: center;
+            background: #eef2ff;
+            color: #374fc7;
+            font-size: .9rem;
+            font-weight: 700;
+        }
+
+        .kpi .label { color: #64748b; font-size: .78rem; }
+        .kpi .value { font-size: 1.58rem; line-height: 1; font-weight: 800; color: #162033; }
+        .kpi .sub { color: #8a97a8; font-size: .78rem; }
+
+        .kpi.kpi-ok .kpi-icon { background: #dcfce7; color: #166534; }
+        .kpi.kpi-max .kpi-icon { background: #ede9fe; color: #5b21b6; }
+        .kpi.kpi-verify .kpi-icon { background: #dbeafe; color: #1d4ed8; }
+
+        .clients-workspace {
+            background: #fff;
+            border: 1px solid #e7ebf5;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+            overflow: hidden;
+        }
+
+        .workspace-head {
+            padding: 1rem 1.1rem .85rem;
+            border-bottom: 1px solid #edf1f7;
+        }
+
+        .workspace-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+            margin-bottom: .8rem;
+        }
+
+        .workspace-title {
+            font-size: 1.1rem;
+            font-weight: 750;
+            color: #17233b;
+        }
+
+        .results-count {
+            font-size: .82rem;
+            font-weight: 600;
+            color: #516079;
+            background: #f2f6ff;
+            border: 1px solid #e2ebff;
+            padding: .25rem .58rem;
+            border-radius: 999px;
+        }
+
+        .filter-form {
+            display: grid;
+            grid-template-columns: minmax(260px, 2fr) 1fr 1fr auto auto;
+            gap: .62rem;
+        }
+
+        .filter-form input,
+        .filter-form select {
+            height: 44px;
+            border: 1px solid #d8e0ee;
+            border-radius: 10px;
+            padding: 0 .8rem;
+            color: #1f2937;
+            background: #fff;
+        }
+
+        .filter-form input { min-width: 240px; }
+        .filter-form input:focus,
+        .filter-form select:focus {
+            outline: none;
+            border-color: #94a3ff;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, .14);
+        }
+
+        .btn.btn-filter { min-height: 44px; padding: .62rem .95rem; font-size: .9rem; }
+
+        .table-wrap { overflow: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1140px; }
+        th, td {
+            padding: .9rem .85rem;
+            border-bottom: 1px solid #eef2f7;
+            vertical-align: top;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: #f8faff;
+            color: #667085;
+            font-size: .76rem;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            font-weight: 700;
+        }
+
+        tbody tr:hover { background: #f9fbff; }
+
+        .client-link {
+            color: #1f4fd5;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .client-link:hover { text-decoration: underline; }
+        .muted { color: #94a3b8; font-size: .81rem; margin-top: .14rem; }
+
+        .badge {
+            border-radius: 999px;
+            padding: .28rem .62rem;
+            font-size: .73rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .b-ok { background: #dcfce7; color: #166534; }
+        .b-no { background: #f1f5f9; color: #64748b; }
+        .b-src-manual { background: #ede9fe; color: #5b21b6; }
+        .b-src-ref { background: #dbeafe; color: #1d4ed8; }
+
+        .table-actions .btn-open {
+            background: #3b82f6;
+            color: #fff;
+            border-radius: 9px;
+            padding: .48rem .8rem;
+            font-size: .82rem;
+            text-decoration: none;
+            font-weight: 650;
+            display: inline-block;
+        }
+
+        .table-actions .btn-open:hover { background: #2563eb; }
+
+        .empty-card {
+            background: #fff;
+            border: 1px solid #e7ebf5;
+            border-radius: 14px;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, .06);
+            text-align: center;
+            padding: 2.2rem 1rem;
+        }
+
+        @media (max-width: 1200px) {
+            .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .filter-form { grid-template-columns: 1fr 1fr 1fr; }
+        }
+
+        @media (max-width: 920px) {
+            .partner-page { padding: 1rem; }
+            .page-hero { flex-direction: column; }
+            .filter-form { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='partner_clients' %}
+    <div class="main-content">
+        <div class="partner-page">
+            <section class="page-hero">
+                <div>
+                    <h1 class="hero-title">Клиенты партнёра</h1>
+                    <p class="hero-subtitle">Управляйте клиентской базой, отслеживайте активации в ботах и сделки.</p>
+                    <div class="hero-stats">
+                        <span class="hero-chip">{{ stats.total_clients|default:0 }} клиента</span>
+                        <span class="hero-chip">{{ stats.tg_activated|default:0 }} активирован</span>
+                        <span class="hero-chip">{{ stats.verified_count|default:0 }} верифицирован</span>
+                    </div>
+                </div>
+                <a href="{% url 'bot_app:partner_client_create' %}" class="btn btn-primary btn-hero">+ Добавить клиента</a>
+            </section>
+
+            <section class="kpi-grid">
+                <article class="kpi">
+                    <div class="kpi-top"><span class="kpi-icon">👥</span><div class="label">Всего клиентов</div></div>
+                    <div class="value">{{ stats.total_clients|default:0 }}</div>
+                    <div class="sub">Общий размер базы</div>
+                </article>
+                <article class="kpi kpi-ok">
+                    <div class="kpi-top"><span class="kpi-icon">TG</span><div class="label">Активированы в Telegram</div></div>
+                    <div class="value">{{ stats.tg_activated|default:0 }}</div>
+                    <div class="sub">С доступом к Telegram-боту</div>
+                </article>
+                <article class="kpi kpi-max">
+                    <div class="kpi-top"><span class="kpi-icon">MX</span><div class="label">Активированы в MAX</div></div>
+                    <div class="value">{{ stats.max_activated|default:0 }}</div>
+                    <div class="sub">С доступом к MAX-боту</div>
+                </article>
+                <article class="kpi kpi-verify">
+                    <div class="kpi-top"><span class="kpi-icon">✔</span><div class="label">Верифицированы</div></div>
+                    <div class="value">{{ stats.verified_count|default:0 }}</div>
+                    <div class="sub">Подтверждённые клиенты</div>
+                </article>
+            </section>
+
+            {% if clients %}
+            <section class="clients-workspace">
+                <div class="workspace-head">
+                    <div class="workspace-title-row">
+                        <h2 class="workspace-title">База клиентов</h2>
+                        <span class="results-count">Найдено: {{ clients|length }}</span>
+                    </div>
+                    <form method="get" class="filter-form">
+                        <input name="search" value="{{ search }}" placeholder="Поиск по имени, ИНН или телефону">
+                        <select name="source">
+                            <option value="">Все источники</option>
+                            <option value="manual" {% if source_filter == 'manual' %}selected{% endif %}>Вручную</option>
+                            <option value="referral" {% if source_filter == 'referral' %}selected{% endif %}>Реферальная ссылка</option>
+                        </select>
+                        <select name="status">
+                            <option value="">Все статусы</option>
+                            <option value="verified" {% if status_filter == 'verified' %}selected{% endif %}>Верифицирован</option>
+                            <option value="unverified" {% if status_filter == 'unverified' %}selected{% endif %}>Не подтверждён</option>
+                            <option value="tg" {% if status_filter == 'tg' %}selected{% endif %}>Есть Telegram</option>
+                            <option value="max" {% if status_filter == 'max' %}selected{% endif %}>Есть MAX</option>
+                        </select>
+                        <button class="btn btn-primary btn-filter" type="submit">Применить</button>
+                        <a class="btn btn-secondary btn-filter" href="{% url 'bot_app:partner_clients' %}">Сбросить</a>
+                    </form>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr><th>ID</th><th>Клиент</th><th>ИНН</th><th>Телефон</th><th>Telegram</th><th>MAX</th><th>Верификация</th><th>Источник</th><th>Действия</th></tr>
+                        </thead>
+                        <tbody>
+                        {% for c in clients %}
+                            <tr>
+                                <td>{{ c.id }}</td>
+                                <td>
+                                    <a class="client-link" href="{% url 'bot_app:partner_client_detail' c.id %}">{{ c.org_name|default:"" }} {{ c.first_name|default:"" }} {{ c.last_name|default:"" }}</a>
+                                    <div class="muted">{{ c.created_at|ru_datetime }}</div>
+                                </td>
+                                <td>{{ c.inn|default:"-" }}</td>
+                                <td>{{ c.phone|default:"-" }}</td>
+                                <td>{% if c.tg_user_id %}<span class="badge b-ok">Telegram</span>{% else %}<span class="badge b-no">Нет</span>{% endif %}</td>
+                                <td>{% if c.max_user_id %}<span class="badge b-ok">MAX</span>{% else %}<span class="badge b-no">Нет</span>{% endif %}</td>
+                                <td>{% if c.is_verified %}<span class="badge b-ok">Верифицирован</span>{% else %}<span class="badge b-no">Не подтверждён</span>{% endif %}</td>
+                                <td>{% if c.partner_source_type == 'referral' %}<span class="badge b-src-ref">Реферальная ссылка</span>{% else %}<span class="badge b-src-manual">Вручную</span>{% endif %}</td>
+                                <td class="table-actions"><a href="{% url 'bot_app:partner_client_detail' c.id %}" class="btn-open">Открыть</a></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% else %}
+            <section class="empty-card">
+                <h3>Клиентов пока нет</h3>
+                <p class="muted">Добавьте первого клиента или поделитесь реферальной ссылкой.</p>
+                <a href="{% url 'bot_app:partner_client_create' %}" class="btn btn-primary" style="margin-top:.8rem;">Добавить клиента</a>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

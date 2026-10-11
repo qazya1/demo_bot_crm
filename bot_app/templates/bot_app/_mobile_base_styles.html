@@ -1,0 +1,554 @@
+{# === Mobile First Base Styles === #}
+{# Общий базовый CSS для мобильной адаптации всех шаблонов #}
+{# Подключается в <head> шаблонов #}
+
+<style>
+/* === Mobile First Base Styles === */
+
+/* Touch-friendly размеры для всех интерактивных элементов */
+.btn,
+.action-btn,
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="date"],
+input[type="time"],
+input[type="url"],
+select,
+textarea {
+  min-height: 44px; /* Рекомендация Apple HIG */
+  min-width: 44px;
+  font-size: 16px; /* Предотвращает zoom на iOS */
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #e0e0e0);
+}
+
+/* Кнопки - дополнительные touch-friendly стили */
+.btn,
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.btn:active,
+.action-btn:active {
+  transform: scale(0.98);
+}
+
+/* Улучшенная навигация с горизонтальной прокруткой */
+@media (max-width: 768px) {
+  /* Горизонтальная прокрутка для навигации */
+  .nav-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    display: flex;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+    margin: 0 -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .nav-scroll > * {
+    flex-shrink: 0;
+  }
+
+  /* Скрытие скроллбара */
+  .nav-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Карточная сетка - 1 колонка на мобильных */
+  .card-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Адаптивные изображения */
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Таблицы - горизонтальная прокрутка */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Улучшенные отступы для мобильного контента */
+  .container,
+  .main-content {
+    padding-left: max(env(safe-area-inset-left), 1rem);
+    padding-right: max(env(safe-area-inset-right), 1rem);
+  }
+}
+
+/* Safe area для современных устройств с вырезами */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(env(safe-area-inset-left), 0);
+    padding-right: max(env(safe-area-inset-right), 0);
+    padding-bottom: max(env(safe-area-inset-bottom), 0);
+  }
+
+  .sidebar,
+  .page-header,
+  .fixed-top,
+  .fixed-bottom {
+    padding-left: max(env(safe-area-inset-left), 0);
+    padding-right: max(env(safe-area-inset-right), 0);
+  }
+
+  .page-header,
+  .fixed-top {
+    padding-top: max(env(safe-area-inset-top), 1rem);
+  }
+
+  .fixed-bottom,
+  .bottom-nav {
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+}
+
+/* Touch device optimization */
+@media (hover: none) and (pointer: coarse) {
+  /* Увеличенные зоны нажатия для touch-устройств */
+  .btn,
+  .action-btn,
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  .card,
+  .stat-card {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Убираем hover-эффекты на touch-устройствах */
+  .btn:hover,
+  .action-btn:hover,
+  .card:hover,
+  .stat-card:hover {
+    transform: none;
+  }
+
+  /* Добавляем active-эффект */
+  .btn:active,
+  .action-btn:active,
+  .card:active,
+  .stat-card:active {
+    opacity: 0.8;
+  }
+}
+
+/* Dark mode поддержка для базовых элементов */
+@media (prefers-color-scheme: dark) {
+  .btn,
+  .action-btn,
+  input,
+  select,
+  textarea {
+    background-color: var(--color-card-bg, #2d3748);
+    color: var(--color-text, #e2e8f0);
+    border-color: var(--color-border, #4a5568);
+  }
+
+  .btn:active,
+  .action-btn:active {
+    background-color: var(--color-primary-dark, #4c51bf);
+  }
+}
+
+/* === Utility Classes === */
+
+/* Flex-контейнер для кнопок действий на мобильных */
+.mobile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .mobile-actions {
+    flex-direction: column;
+  }
+
+  .mobile-actions .btn,
+  .mobile-actions .action-btn {
+    flex: 1;
+    min-width: 100%;
+  }
+}
+
+/* Адаптивная сетка для статистики */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* === Bottom Navigation (для директора) === */
+@media (max-width: 768px) {
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-card-bg, #ffffff);
+    border-top: 1px solid var(--color-border, #e0e0e0);
+    display: flex;
+    justify-content: space-around;
+    padding: 0.5rem 0;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    z-index: 1000;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  }
+
+  .bottom-nav .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--color-text-muted, #666666);
+    font-size: 0.7rem;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    min-width: 64px;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bottom-nav .nav-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .bottom-nav .nav-label {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .bottom-nav .nav-item.active {
+    color: var(--color-primary, #667eea);
+  }
+
+  .bottom-nav .nav-item:active {
+    transform: scale(0.95);
+  }
+
+  /* Отступ для контента страницы чтобы bottom-nav не перекрывал */
+  .main-content.has-bottom-nav {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Dark mode для bottom-nav */
+@media (prefers-color-scheme: dark) {
+  .bottom-nav {
+    background: var(--color-card-bg, #1a202c);
+    border-top-color: var(--color-border, #4a5568);
+  }
+
+  .bottom-nav .nav-item {
+    color: var(--color-text-muted, #a0aec0);
+  }
+
+  .bottom-nav .nav-item.active {
+    color: var(--color-primary, #667eea);
+  }
+}
+</style>
+
+{# === Swipe-to-close Modal Script === #}
+{# Скрипт для закрытия модальных окон свайпом вниз (только мобильные) #}
+<script>
+(function() {
+  // Проверка мобильного устройства
+  if (window.innerWidth > 768) return;
+
+  var touchStartY = 0;
+  var touchCurrentY = 0;
+  var threshold = 100; // Минимальное расстояние свайпа
+  var activeModal = null;
+
+  document.addEventListener('touchstart', function(e) {
+    touchStartY = e.touches[0].clientY;
+    var modal = e.target.closest('.modal.active');
+    if (modal) {
+      activeModal = modal;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (!activeModal) return;
+    touchCurrentY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    if (!activeModal) return;
+
+    var diff = touchCurrentY - touchStartY;
+
+    // Свайп вниз (diff > threshold)
+    if (diff > threshold) {
+      var closeBtn = activeModal.querySelector('.modal-close');
+      if (closeBtn) {
+        closeBtn.click();
+      }
+    }
+
+    activeModal = null;
+    touchStartY = 0;
+    touchCurrentY = 0;
+  }, { passive: true });
+})();
+</script>
+
+{# === Pull-to-Refresh Script === #}
+{# Скрипт для обновления страницы жестом pull-to-refresh (только мобильные) #}
+<script>
+(function() {
+  // Проверка мобильного устройства
+  if (window.innerWidth > 768) return;
+
+  var startY = 0;
+  var currentY = 0;
+  var threshold = 150; // Минимальное расстояние для refresh
+  var refreshing = false;
+  var pullIndicator = null;
+
+  // Создаём индикатор pull-to-refresh
+  function createPullIndicator() {
+    var indicator = document.createElement('div');
+    indicator.id = 'pullRefreshIndicator';
+    indicator.style.cssText = 'position:fixed;top:0;left:0;right:0;height:60px;background:linear-gradient(180deg,#667eea 0%,transparent 100%);display:flex;align-items:center;justify-content:center;color:white;font-size:0.9rem;z-index:9999;transform:translateY(-100%);transition:transform 0.2s;';
+    indicator.innerHTML = '<span>⬇ Потяните для обновления</span>';
+    document.body.appendChild(indicator);
+    return indicator;
+  }
+
+  pullIndicator = createPullIndicator();
+
+  document.addEventListener('touchstart', function(e) {
+    if (refreshing) return;
+    // Только если скролл в самом верху
+    if (window.scrollY === 0 && document.documentElement.scrollTop === 0) {
+      startY = e.touches[0].clientY;
+    } else {
+      startY = 0;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (refreshing || startY === 0) return;
+    currentY = e.touches[0].clientY;
+    var diff = currentY - startY;
+
+    if (diff > 0 && diff <= threshold * 2) {
+      e.preventDefault();
+      var progress = Math.min(diff / threshold, 1);
+      var translateY = -100 + (progress * 100);
+      pullIndicator.style.transform = 'translateY(' + translateY + '%)';
+
+      if (progress > 0.5) {
+        pullIndicator.innerHTML = '<span>✓ Отпустите для обновления</span>';
+      } else {
+        pullIndicator.innerHTML = '<span>⬇ Потяните для обновления</span>';
+      }
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', function(e) {
+    if (refreshing || startY === 0) return;
+
+    var diff = currentY - startY;
+
+    if (diff > threshold) {
+      // Запускаем refresh
+      refreshing = true;
+      pullIndicator.style.transform = 'translateY(0)';
+      pullIndicator.innerHTML = '<span>⟳ Обновление...</span>';
+
+      // Перезагрузка страницы
+      window.location.reload();
+    } else {
+      // Скрываем индикатор
+      pullIndicator.style.transform = 'translateY(-100%)';
+    }
+
+    startY = 0;
+    currentY = 0;
+  }, { passive: true });
+})();
+</script>
+
+{# === Long-Press Context Menu Script === #}
+{# Скрипт для контекстных действий по long-press (только мобильные) #}
+<script>
+(function() {
+  // Проверка мобильного устройства
+  if (window.innerWidth > 768) return;
+
+  var pressTimer;
+  var longPressDuration = 800; // 800ms для long-press
+  var pressedElement = null;
+
+  // Показ контекстного меню
+  function showContextMenu(element, x, y) {
+    // Удаляем существующее меню если есть
+    var existingMenu = document.querySelector('.long-press-menu');
+    if (existingMenu) existingMenu.remove();
+
+    // Создаём меню
+    var menu = document.createElement('div');
+    menu.className = 'long-press-menu';
+    menu.style.cssText = 'position:fixed;background:white;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2);z-index:10000;min-width:150px;overflow:hidden;';
+    menu.style.left = Math.min(x, window.innerWidth - 160) + 'px';
+    menu.style.top = Math.min(y, window.innerHeight - 100) + 'px';
+
+    // Собираем данные из элемента
+    var clientId = element.getAttribute('data-client-id');
+    var orderId = element.getAttribute('data-order-id');
+    var notificationId = element.getAttribute('data-notification-id');
+    var chatId = element.getAttribute('data-chat-id');
+
+    var items = [];
+
+    // Контекстное меню для клиента
+    if (clientId) {
+      items.push({ icon: '👁', label: 'Открыть', href: '/crm/client/' + clientId + '/' });
+      items.push({ icon: '✏️', label: 'Редактировать', action: 'edit-client:' + clientId });
+      items.push({ icon: '📞', label: 'Позвонить', href: 'tel:' + (element.getAttribute('data-phone') || '') });
+    }
+
+    // Контекстное меню для заказа
+    if (orderId) {
+      items.push({ icon: '👁', label: 'Открыть', href: '/crm/orders/' });
+      items.push({ icon: '📝', label: 'Изменить статус', action: 'order-status:' + orderId });
+    }
+
+    // Контекстное меню для уведомления
+    if (notificationId) {
+      items.push({ icon: '✓', label: 'Прочитано', action: 'notif-read:' + notificationId });
+      items.push({ icon: '✕', label: 'Скрыть', action: 'notif-dismiss:' + notificationId });
+    }
+
+    // Контекстное меню для чата
+    if (chatId) {
+      items.push({ icon: '💬', label: 'Открыть', href: '/specialist/chat/' + chatId + '/' });
+      items.push({ icon: '📌', label: 'Закрепить', action: 'chat-pin:' + chatId });
+    }
+
+    // Если нет элементов меню - не показываем
+    if (items.length === 0) {
+      menu.remove();
+      return;
+    }
+
+    // Добавляем пункты меню
+    items.forEach(function(item) {
+      var btn = document.createElement('div');
+      btn.style.cssText = 'padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #eee;';
+      btn.innerHTML = '<span>' + item.icon + '</span><span>' + item.label + '</span>';
+      btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (item.href) {
+          window.location.href = item.href;
+        } else if (item.action) {
+          // Кастомное действие - генерируем событие
+          var event = new CustomEvent('longpress-action', { detail: { action: item.action, element: element } });
+          document.dispatchEvent(event);
+        }
+        menu.remove();
+      };
+      btn.ontouchstart = function(e) {
+        e.stopPropagation();
+      };
+      menu.appendChild(btn);
+    });
+
+    document.body.appendChild(menu);
+
+    // Закрытие по клику вне меню
+    setTimeout(function() {
+      document.addEventListener('click', function closeMenu(e) {
+        if (!menu.contains(e.target)) {
+          menu.remove();
+          document.removeEventListener('click', closeMenu);
+        }
+      });
+    }, 100);
+  }
+
+  // Обработчики long-press
+  function startPress(e) {
+    var target = e.target.closest('[data-client-id], [data-order-id], [data-notification-id], [data-chat-id], tr[data-client-id], .card[data-client-id]');
+    if (!target) return;
+
+    // Предотвращаем контекстное меню браузера
+    e.preventDefault();
+
+    pressedElement = target;
+
+    pressTimer = setTimeout(function() {
+      if (pressedElement) {
+        var rect = pressedElement.getBoundingClientRect();
+        showContextMenu(pressedElement, rect.right - 10, rect.top + 40);
+        pressedElement = null;
+      }
+    }, longPressDuration);
+  }
+
+  function cancelPress() {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+    pressedElement = null;
+  }
+
+  // Регистрируем обработчики
+  document.addEventListener('touchstart', startPress, { passive: false });
+  document.addEventListener('touchend', cancelPress, { passive: true });
+  document.addEventListener('touchmove', cancelPress, { passive: true });
+  document.addEventListener('contextmenu', function(e) {
+    // Предотвращаем стандартное контекстное меню на элементах с данными
+    if (e.target.closest('[data-client-id], [data-order-id], [data-notification-id], [data-chat-id]')) {
+      e.preventDefault();
+    }
+  });
+})();
+</script>

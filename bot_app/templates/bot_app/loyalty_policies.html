@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Нормативы лояльности - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        /* Специфичные стили для страницы политик лояльности */
+        .table-wrap { width: 100%; overflow-x: auto; }
+        table { font-size: 0.9rem; min-width: 980px; }
+        th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid #ecf0f1; }
+        .section h2 { font-size: 1.3rem; margin-bottom: 1rem; }
+        .form-row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: end; margin-bottom: 0.75rem; }
+        .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
+        .form-group label { font-size: 0.8rem; font-weight: 600; color: #495057; }
+        .form-group input, .form-group select { padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; }
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+        .info-card {
+            margin-bottom: 1rem;
+            padding: 0.85rem 1rem;
+            border: 1px solid #dce7f3;
+            border-radius: 10px;
+            background: #f8fbff;
+        }
+        .info-card h3 { margin: 0 0 0.5rem 0; font-size: 1rem; }
+        .info-list { margin: 0; padding-left: 1.1rem; color: #2f3f51; }
+        .info-list li { margin-bottom: 0.35rem; }
+        .note-muted { color: #6c7b88; font-size: 0.84rem; margin-top: 0.5rem; }
+    </style>
+</head>
+<body>
+    {% load custom_filters %}
+    {% include 'bot_app/_sidebar.html' with active_page='loyalty_policies' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div>
+                <h1>Нормативы лояльности</h1>
+                <span class="subtitle">Политики начисления, уровни рейтинга, реферальные правила</span>
+            </div>
+        </div>
+
+        <div class="container">
+            {% if success %}<div class="alert alert-success">Сохранено!</div>{% endif %}
+            {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+            <!-- Политики начисления -->
+            <div class="section">
+                <h2>Политики начисления баллов</h2>
+                <div class="alert alert-info" style="margin-bottom:1rem;">
+                    Политика начисления — это правило, которое определяет, сколько баллов начислять за конкретное событие:
+                    <strong>тип продукта</strong> + <strong>тип события</strong>.
+                    Сначала отбираются активные правила по продукту и событию, затем применяется правило с наибольшим приоритетом.
+                </div>
+                <div class="table-wrap">
+                <table>
+                    <thead><tr>
+                        <th>Продукт</th><th>Событие</th><th>За руб.</th><th>Фикс.</th>
+                        <th>Макс.</th><th>Мин.заказ</th><th>Срок (дн.)</th><th>Приоритет</th><th>Статус</th><th></th>
+                    </tr></thead>
+                    <tbody>
+                    {% for p in policies %}
+                    <tr>
+                        <td><strong>{{ p.product_type|loyalty_label:"product_type" }}</strong><br><small style="color:#7f8c8d">{{ p.product_type }}</small></td>
+                        <td><strong>{{ p.event_type|loyalty_label:"policy_event_type" }}</strong><br><small style="color:#7f8c8d">{{ p.event_type }}</small></td>
+                        <td>{{ p.points_per_rub|default_if_none:"-" }}</td>
+                        <td>{{ p.points_fixed|default_if_none:"-" }}</td>
+                        <td>{{ p.max_points|default_if_none:"-" }}</td>
+                        <td>{{ p.min_order_rub|default_if_none:"-" }}</td>
+                        <td>{{ p.points_lifetime_days|default_if_none:"-" }}</td>
+                        <td>{{ p.priority }}</td>
+                        <td><span class="badge {% if p.is_active %}badge-active{% else %}badge-inactive{% endif %}">{% if p.is_active %}Акт{% else %}Выкл{% endif %}</span></td>
+                        <td>
+                            <form method="post" style="display:inline">{% csrf_token %}
+                                <input type="hidden" name="action" value="delete_policy">
+                                <input type="hidden" name="id" value="{{ p.id }}">
+                                <button class="btn btn-sm btn-danger" onclick="return confirm('Удалить?')">X</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10" style="text-align:center;color:#999">Нет политик</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                <details style="margin-top:1rem"><summary class="btn btn-primary">+ Добавить политику</summary>
+                <form method="post" style="margin-top:1rem">{% csrf_token %}
+                    <input type="hidden" name="action" value="save_policy">
+                    <div class="alert alert-warning" style="margin-bottom:0.75rem;">
+                        <strong>Что означает каждая настройка:</strong><br>
+                        • <strong>За руб.</strong> — сколько баллов начислять за 1 ₽ заказа.<br>
+                        • <strong>Фикс. баллов</strong> — фиксированное начисление (если заполнено, используется вместо ставки за рубль).<br>
+                        • <strong>Макс.</strong> — ограничение начисления за одну операцию.<br>
+                        • <strong>Мин.заказ</strong> — минимальная сумма, при которой правило срабатывает.<br>
+                        • <strong>Срок (дн.)</strong> — через сколько дней баллы сгорят (пусто = срок по системе).<br>
+                        • <strong>Приоритет</strong> — чем выше число, тем раньше применяется правило при пересечениях.
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Продукт</label>
+                            <select name="product_type" required>
+                                <option value="order">Заказ (order)</option>
+                                <option value="service">Услуга (service)</option>
+                                <option value="ofd">ОФД (ofd)</option>
+                                <option value="edo">ЭДО (edo)</option>
+                                <option value="kkt">ККТ (kkt)</option>
+                                <option value="chat_payment">Оплата в чате (chat_payment)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Событие</label>
+                            <select name="event_type" required>
+                                <option value="purchase">Покупка (purchase)</option>
+                                <option value="first_purchase">Первая покупка (first_purchase)</option>
+                                <option value="repeat_purchase">Повторная покупка (repeat_purchase)</option>
+                                <option value="profile_field">Заполнение профиля (profile_field)</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>За руб.</label><input name="points_per_rub" type="number" step="0.01"></div>
+                        <div class="form-group"><label>Фикс. баллов</label><input name="points_fixed" type="number"></div>
+                        <div class="form-group"><label>Макс. баллов</label><input name="max_points" type="number"></div>
+                        <div class="form-group"><label>Мин.заказ</label><input name="min_order_rub" type="number" step="0.01"></div>
+                        <div class="form-group"><label>Срок (дн.)</label><input name="points_lifetime_days" type="number"></div>
+                        <div class="form-group"><label>Приоритет</label><input name="priority" type="number" value="0"></div>
+                        <div class="form-group"><label>Активна</label><select name="is_active"><option value="1">Да</option><option value="">Нет</option></select></div>
+                        <div class="form-group"><label>&nbsp;</label><button class="btn btn-success">Создать</button></div>
+                    </div>
+                </form>
+                </details>
+            </div>
+
+            <!-- Уровни рейтинга -->
+            <div class="section">
+                <h2>Уровни рейтинга</h2>
+                <div class="info-card">
+                    <h3>Как работают уровни рейтинга</h3>
+                    <ul class="info-list">
+                        <li><strong>Тип</strong> определяет, к кому применяется уровень: к клиенту или партнёру.</li>
+                        <li><strong>Мин. рейтинг</strong> — нижняя граница входа в уровень. Система выбирает максимальный подходящий порог.</li>
+                        <li><strong>Бонус %</strong> — надбавка, связанная с уровнем (для партнёра обычно к ставке выплаты, для клиента — к начислениям).</li>
+                        <li><strong>Описание</strong> — расшифровка условий для директора и аудиторов.</li>
+                    </ul>
+                    <div class="note-muted">
+                        Практика настройки: задавайте пороги без пересечений и увеличивайте бонус по мере роста рейтинга (например 0% → 3% → 7%).
+                        Для партнёров этот бонус применяется в формуле: <strong>итоговая ставка = базовая ставка + бонус уровня</strong>.
+                    </div>
+                </div>
+                <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Тип</th><th>Название</th><th>Мин. рейтинг</th><th>Бонус %</th><th>Влияние на ставку партнёра</th><th>Описание</th><th>Статус</th><th></th></tr></thead>
+                    <tbody>
+                    {% for t in tiers %}
+                    <tr>
+                        <td><strong>{{ t.target_type|loyalty_label:"target_type" }}</strong><br><small style="color:#7f8c8d">{{ t.target_type }}</small></td>
+                        <td><strong>{{ t.tier_name|loyalty_label:"tier_name" }}</strong><br><small style="color:#7f8c8d">{{ t.tier_name }}</small></td>
+                        <td>{{ t.min_rating }}</td>
+                        <td>{{ t.bonus_pct }}%</td>
+                        <td>
+                            {% if t.target_type == 'partner' %}
+                                +{{ t.bonus_pct }}% к базовой ставке
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>{{ t.description|default:"-" }}</td>
+                        <td><span class="badge {% if t.is_active %}badge-active{% else %}badge-inactive{% endif %}">{% if t.is_active %}Акт{% else %}Выкл{% endif %}</span></td>
+                        <td>
+                            <form method="post" style="display:inline">{% csrf_token %}
+                                <input type="hidden" name="action" value="delete_tier">
+                                <input type="hidden" name="id" value="{{ t.id }}">
+                                <button class="btn btn-sm btn-danger" onclick="return confirm('Удалить?')">X</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" style="text-align:center;color:#999">Нет уровней</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                <details style="margin-top:1rem"><summary class="btn btn-primary">+ Добавить уровень</summary>
+                <form method="post" style="margin-top:1rem">{% csrf_token %}
+                    <input type="hidden" name="action" value="save_tier">
+                    <div class="form-row">
+                        <div class="form-group"><label>Тип</label><select name="target_type"><option value="client">Клиент (client)</option><option value="partner">Партнёр (partner)</option></select></div>
+                        <div class="form-group">
+                            <label>Название уровня</label>
+                            <input
+                                name="tier_name"
+                                type="text"
+                                required
+                                list="tier-names-client"
+                                placeholder="Например: diamond"
+                            >
+                            <small class="note-muted">Можно ввести любое название. Подсказки ниже — из существующих уровней.</small>
+                            <datalist id="tier-names-client">
+                                {% for tier_name in client_tier_options %}
+                                <option value="{{ tier_name }}">{{ tier_name|loyalty_label:"tier_name" }}</option>
+                                {% endfor %}
+                            </datalist>
+                            <datalist id="tier-names-partner">
+                                {% for tier_name in partner_tier_options %}
+                                <option value="{{ tier_name }}">{{ tier_name|loyalty_label:"tier_name" }}</option>
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        <div class="form-group"><label>Мин. рейтинг</label><input name="min_rating" type="number" required value="0"></div>
+                        <div class="form-group"><label>Бонус %</label><input name="bonus_pct" type="number" step="0.01" value="0"></div>
+                        <div class="form-group"><label>Описание</label><input name="description" placeholder="Описание"></div>
+                        <div class="form-group"><label>Активен</label><select name="is_active"><option value="1">Да</option><option value="">Нет</option></select></div>
+                        <div class="form-group"><label>&nbsp;</label><button class="btn btn-success">Создать</button></div>
+                    </div>
+                </form>
+                </details>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+(function () {
+    const targetSelect = document.querySelector('select[name="target_type"]');
+    const tierInput = document.querySelector('input[name="tier_name"]');
+    if (!targetSelect || !tierInput) return;
+
+    const syncTierHints = () => {
+        tierInput.setAttribute(
+            'list',
+            targetSelect.value === 'partner' ? 'tier-names-partner' : 'tier-names-client'
+        );
+    };
+
+    targetSelect.addEventListener('change', syncTierHints);
+    syncTierHints();
+})();
+</script>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

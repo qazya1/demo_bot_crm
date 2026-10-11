@@ -1,0 +1,1551 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Чаты - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd6;
+            --color-success: #27ae60;
+            --color-warning: #f39c12;
+            --color-danger: #e74c3c;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .header {
+            background: var(--color-card-bg);
+            padding: var(--spacing-md) var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding-top: max(env(safe-area-inset-top), var(--spacing-md));
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 600; color: var(--color-text); }
+        .content { padding: var(--spacing-lg) var(--spacing-xl); }
+        .table-container {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 750px; }
+        table th {
+            background: var(--color-card-hover);
+            padding: var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-text);
+            border-bottom: 2px solid var(--color-border-light);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        table td { padding: var(--spacing-md); border-bottom: 1px solid var(--color-border-light); vertical-align: middle; }
+        table tr:hover { background: var(--color-card-hover); }
+        table tr { cursor: pointer; }
+        .badge { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-primary { background: #e3e8ff; color: #667eea; }
+        .badge-success { background: #d4edda; color: #27ae60; }
+        .badge-warning { background: #fff3cd; color: #f39c12; }
+        .badge-danger { background: #f8d7da; color: #c0392b; }
+        .badge-secondary { background: #e9ecef; color: #6c757d; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #95a5a6; }
+        .empty-state .icon { font-size: 4rem; margin-bottom: 1rem; }
+        .stats-bar {
+            display: flex;
+            gap: var(--spacing-xl);
+            padding: var(--spacing-md) var(--spacing-xl);
+            background: var(--color-card-bg);
+            border-bottom: 1px solid var(--color-border-light);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .stats-bar .stat { display: flex; flex-direction: column; }
+        .stats-bar .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--color-primary); }
+        .stats-bar .stat-label { font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .filter-bar { display: flex; gap: var(--spacing-sm); align-items: center; margin-left: auto; flex-wrap: wrap; }
+        .filter-bar .btn { font-size: 0.8rem; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid var(--color-border);
+            background: var(--color-card-bg);
+            color: #666;
+        }
+        .btn.active, .btn-primary { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+        .btn:hover { border-color: var(--color-primary); }
+        .btn-danger {
+            border-color: rgba(231, 76, 60, 0.35);
+            color: var(--color-danger);
+        }
+        .btn-danger:hover {
+            background: #fff2f1;
+            border-color: var(--color-danger);
+        }
+
+        /* ===== Action Cell Dropdown ===== */
+        .action-cell {
+            position: relative;
+            white-space: nowrap;
+        }
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            background: var(--color-card-bg);
+            color: var(--color-text);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+        .action-btn:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+            background: #eef1ff;
+        }
+        .action-btn.active {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+            background: #eef1ff;
+        }
+        .action-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            min-width: 220px;
+            background: var(--color-card-bg);
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-md);
+            z-index: 100;
+            overflow: hidden;
+        }
+        .action-dropdown.active {
+            display: block;
+        }
+        .action-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.7rem 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            font-size: 0.85rem;
+            color: var(--color-text);
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            text-decoration: none;
+        }
+        .action-dropdown-item:hover {
+            background: var(--color-card-hover);
+        }
+        .action-dropdown-item.danger {
+            color: var(--color-danger);
+        }
+        .action-dropdown-item.danger:hover {
+            background: #fff2f1;
+        }
+        .action-dropdown-item .action-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+            width: 20px;
+            text-align: center;
+        }
+        .action-dropdown-item .action-label {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .action-dropdown-divider {
+            height: 1px;
+            background: var(--color-border-light);
+            margin: 0.25rem 0;
+        }
+        .action-dropdown-item:disabled,
+        .action-dropdown-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .msg-count { font-size: 0.75rem; color: var(--color-text-muted); }
+        .paid-amount { font-weight: 600; color: var(--color-success); }
+
+        .unread-filter-btn {
+            border-color: #dbe4ff;
+            color: #4f63d9;
+            background: #f4f7ff;
+            font-weight: 600;
+        }
+        .unread-filter-btn:hover {
+            border-color: #b8c7ff;
+            background: #eaf0ff;
+            color: #3f51c4;
+        }
+        .unread-filter-btn.active {
+            background: #4f63d9;
+            border-color: #4f63d9;
+            color: #fff;
+        }
+        .unread-filter-icon {
+            font-size: 0.8rem;
+            line-height: 1;
+        }
+        .unread-filter-count {
+            display: none;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            padding: 0 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            align-items: center;
+            justify-content: center;
+            background: rgba(79, 99, 217, 0.14);
+            color: #4055cf;
+        }
+        .unread-filter-btn.active .unread-filter-count {
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+
+        /* ===== Unread message indicator ===== */
+        .chat-row-unread {
+            background: linear-gradient(90deg, rgba(102,126,234,0.10) 0%, rgba(102,126,234,0.03) 100%) !important;
+            box-shadow: inset 3px 0 0 #667eea;
+        }
+        .chat-row-unread:hover {
+            background: linear-gradient(90deg, rgba(102,126,234,0.16) 0%, rgba(102,126,234,0.06) 100%) !important;
+        }
+        .chat-id-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .new-message-dot {
+            display: none;
+            width: 10px;
+            height: 10px;
+            background: #5a6fd6;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 3px rgba(90,111,214,0.16);
+        }
+        .new-message-dot.visible {
+            display: inline-block;
+        }
+        .chat-id.is-unread {
+            font-weight: 700;
+            color: #3448bf;
+        }
+        .unread-count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 7px;
+            background: #5268de;
+            color: #ffffff;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-left: 6px;
+            box-shadow: 0 2px 8px rgba(82,104,222,0.25);
+        }
+        .unread-status-pill {
+            display: none;
+            margin-left: 0.45rem;
+            padding: 0.18rem 0.48rem;
+            border-radius: 999px;
+            font-size: 0.66rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #4a5ecf;
+            background: rgba(102,126,234,0.14);
+        }
+        .unread-status-pill.visible {
+            display: inline-flex;
+        }
+
+
+        /* ===== CRM chat cards list ===== */
+        .table-wrapper {
+            overflow-x: visible;
+            padding: var(--spacing-md);
+            background: #f6f8fc;
+        }
+        .chat-list-table {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .chat-list-head {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+        }
+        .chat-list-body {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        .chat-card-row {
+            display: block;
+            cursor: pointer;
+            border-radius: var(--radius-md);
+        }
+        .chat-card-row:hover { background: transparent; }
+        .chat-card-cell {
+            display: block;
+            padding: 0;
+            border-bottom: 0;
+        }
+        .chat-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border-light);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
+        }
+        .chat-card-row:hover .chat-card {
+            border-color: rgba(102, 126, 234, 0.35);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+        .chat-row-unread .chat-card {
+            background: linear-gradient(90deg, rgba(102,126,234,0.14) 0%, rgba(255,255,255,0.98) 24%, var(--color-card-bg) 100%);
+            border-color: rgba(102,126,234,0.35);
+            box-shadow: inset 4px 0 0 #667eea, 0 2px 10px rgba(82,104,222,0.12);
+        }
+        .chat-row-unread:hover .chat-card {
+            background: linear-gradient(90deg, rgba(102,126,234,0.18) 0%, rgba(255,255,255,0.98) 24%, var(--color-card-bg) 100%);
+        }
+        .chat-row-closed .chat-card {
+            opacity: 0.78;
+            background: #fbfcfd;
+        }
+        .chat-card-main {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto 44px;
+            gap: var(--spacing-md);
+            align-items: start;
+        }
+        .chat-card-content {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .chat-card-topline,
+        .chat-card-client-line {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .chat-card-topline .badge { padding: 0.22rem 0.6rem; }
+        .chat-client-name {
+            color: var(--color-text);
+            text-decoration: none;
+            font-size: 1.05rem;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+        .chat-row-unread .chat-client-name { color: #2f3ea8; }
+        .chat-client-name:hover { color: var(--color-primary); }
+        .chat-client-phone {
+            color: var(--color-text-muted);
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+        .chat-client-inn {
+            color: var(--color-text-muted);
+            font-size: 0.78rem;
+        }
+        .chat-preview {
+            margin-top: 0.2rem;
+            color: var(--color-text);
+            font-size: 0.95rem;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+        .chat-preview-empty {
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+        .chat-card-side {
+            min-width: 150px;
+            text-align: right;
+            color: var(--color-text-muted);
+            font-size: 0.82rem;
+            line-height: 1.35;
+        }
+        .chat-activity-time {
+            color: var(--color-text);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .chat-created-time { margin-top: 0.15rem; }
+        .chat-card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            padding-top: var(--spacing-sm);
+            border-top: 1px dashed var(--color-border-light);
+        }
+        .meta-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            max-width: 100%;
+            padding: 0.34rem 0.55rem;
+            border-radius: 999px;
+            background: #f0f3f8;
+            color: var(--color-text);
+            font-size: 0.76rem;
+            line-height: 1.2;
+        }
+        .meta-label {
+            color: var(--color-text-muted);
+            font-weight: 600;
+        }
+        .meta-value {
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+        .meta-value a {
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+        .meta-badge-alert { background: #fff2f1; color: var(--color-danger); }
+        .meta-badge-process { background: #eef1ff; color: var(--color-primary); }
+        .closed-action-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            color: var(--color-text-muted);
+            font-size: 0.85rem;
+        }
+
+        .burger-menu {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--color-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        /* Chat history modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; width: 95%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #ecf0f1; }
+        .modal-header h3 { font-size: 1.1rem; font-weight: 600; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #95a5a6; }
+        .modal-body { flex: 1; overflow-y: auto; padding: 1rem; }
+        .chat-message {
+            margin-bottom: 0.6rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 12px;
+            width: fit-content;
+            max-width: min(78%, 560px);
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .chat-message.client { background: #e3e8ff; margin-right: auto; border-bottom-left-radius: 4px; }
+        .chat-message.specialist { background: #f0f0f0; margin-left: auto; border-bottom-right-radius: 4px; }
+        .chat-message .sender { font-size: 0.7rem; font-weight: 600; color: #667eea; margin-bottom: 0.2rem; }
+        .chat-message.specialist .sender { color: #8e44ad; }
+        .chat-message .text {
+            font-size: 0.9rem;
+            line-height: 1.35;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .chat-message .time {
+            font-size: 0.7rem;
+            color: #95a5a6;
+            margin-top: 0.15rem;
+            align-self: flex-end;
+            white-space: nowrap;
+        }
+        .chat-msg-image { max-width: 100%; max-height: 300px; border-radius: 8px; cursor: pointer; }
+        .chat-msg-video { max-width: 100%; border-radius: 8px; }
+        .chat-msg-file { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(0,0,0,0.05); border-radius: 8px; text-decoration: none; color: #667eea; font-size: 0.85rem; }
+        .chat-system-event {
+            margin: 0.65rem auto;
+            padding: 0.45rem 0.75rem;
+            border-radius: 999px;
+            width: fit-content;
+            max-width: 95%;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-align: center;
+            background: #eef3ff;
+            color: #2f4f8f;
+            border: 1px solid #ccd9ff;
+        }
+        .chat-reply-form { padding: 1rem; background: #f8f9fa; border-top: 1px solid #ecf0f1; border-radius: 0 0 12px 12px; }
+        .transfer-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+        .transfer-controls select { min-width: 260px; max-width: 100%; padding: 0.55rem 0.7rem; border: 1px solid #dfe6e9; border-radius: 8px; font-size: 0.9rem; }
+        .btn-transfer { border-color: rgba(102,126,234,0.35); color: var(--color-primary); }
+        .btn-transfer:hover { background: #eef1ff; border-color: var(--color-primary); }
+
+        /* Image lightbox */
+        .chat-image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 300; justify-content: center; align-items: center; cursor: pointer; }
+        .chat-image-modal.active { display: flex; }
+        .chat-image-modal img { max-width: 95%; max-height: 95%; object-fit: contain; }
+        .chat-image-modal .close-img { position: absolute; top: 1rem; right: 1.5rem; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; }
+
+        @media (max-width: 768px) {
+            .burger-menu { display: block; }
+            .header h1 { font-size: 1.2rem; }
+            .stats-bar { gap: 0.75rem; padding: 0.75rem; }
+            .filter-bar { width: 100%; }
+            .action-dropdown { min-width: 200px; }
+            .action-dropdown-item { padding: 0.6rem 0.8rem; font-size: 0.8rem; }
+            .content { padding: var(--spacing-sm); }
+            .table-wrapper { padding: var(--spacing-sm); }
+            .chat-card { padding: var(--spacing-sm); }
+            .chat-card-main { grid-template-columns: minmax(0, 1fr) 40px; gap: var(--spacing-sm); }
+            .chat-card-side { grid-column: 1 / -1; text-align: left; min-width: 0; order: 3; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+            .action-cell { grid-column: 2; grid-row: 1; justify-self: end; }
+            .chat-card-content { grid-column: 1; }
+            .chat-client-name { font-size: 1rem; }
+            .chat-preview { font-size: 0.9rem; }
+        }
+
+        @media (max-width: 480px) {
+            .action-dropdown { min-width: 180px; right: -8px; }
+            .action-btn { width: 34px; height: 34px; font-size: 1rem; }
+            .chat-card-topline, .chat-card-client-line { gap: 0.35rem; }
+            .meta-badge { width: 100%; justify-content: space-between; border-radius: var(--radius-sm); }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root { --color-bg: #1a1a2e; --color-text: #e0e0e0; --color-text-muted: #a0a0a0; --color-card-bg: #16213e; --color-card-hover: #1e2d50; --color-border: #2a3a5c; --color-border-light: #2a3a5c; }
+            .chat-message.client { background: #2a3a5c; }
+            .chat-message.specialist { background: #1e2d50; }
+            .table-wrapper { background: #111827; }
+            .chat-row-unread .chat-card { background: linear-gradient(90deg, rgba(102,126,234,0.22) 0%, var(--color-card-bg) 32%, var(--color-card-bg) 100%); }
+            .chat-row-closed .chat-card { background: #14203a; }
+            .meta-badge { background: #1e2d50; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='crm_chats' %}
+
+    <div class="main-content">
+        <div class="header">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+                <h1>Чаты поддержки</h1>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="table-container">
+                <div class="stats-bar">
+                    <div class="stat">
+                        <span class="stat-value">{{ total_chats }}</span>
+                        <span class="stat-label">Всего чатов</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" style="color: var(--color-success);">{{ active_chats }}</span>
+                        <span class="stat-label">Активных</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" style="color: var(--color-warning);">{{ pending_chats }}</span>
+                        <span class="stat-label">Ожидают</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">{{ shown_count }}</span>
+                        <span class="stat-label">Показано</span>
+                    </div>
+                    <div class="filter-bar">
+                        <span style="font-size: 0.8rem; color: #95a5a6;">Статус:</span>
+                        <a href="?profession={{ profession_filter|urlencode }}{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if not status_filter %}active{% endif %}">Все</a>
+                        <a href="?status=active&profession={{ profession_filter|urlencode }}{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if status_filter == 'active' %}active{% endif %}">Активные</a>
+                        <a href="?status=pending&profession={{ profession_filter|urlencode }}{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if status_filter == 'pending' %}active{% endif %}">Ожидают</a>
+                        <a href="?status=consultation&profession={{ profession_filter|urlencode }}{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if status_filter == 'consultation' %}active{% endif %}">Консультация</a>
+                        <a href="?status=closed&profession={{ profession_filter|urlencode }}{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if status_filter == 'closed' %}active{% endif %}">Закрытые</a>
+                        <span style="width:1px;height:24px;background:var(--color-border-light);margin:0 0.25rem;"></span>
+                        <a href="?unread=1&profession={{ profession_filter|urlencode }}{% if status_filter %}&status={{ status_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}"
+                           id="unread-filter-btn"
+                           class="btn unread-filter-btn {% if unread_filter %}active{% endif %}">
+                            <span class="unread-filter-icon">●</span>
+                            <span>Новые сообщения</span>
+                            <span class="unread-filter-count" id="unread-filter-count"></span>
+                        </a>
+                    </div>
+                </div>
+                {% if is_director %}
+                <div class="stats-bar" style="padding-top: 0;">
+                    <div class="filter-bar" style="margin-left: 0;">
+                        <span style="font-size: 0.8rem; color: #95a5a6;">Отдел:</span>
+                        <a href="?status={{ status_filter|urlencode }}{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if not profession_filter %}active{% endif %}">Все</a>
+                        <a href="?status={{ status_filter|urlencode }}&profession=0{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if profession_filter == '0' %}active{% endif %}">Бухгалтер</a>
+                        <a href="?status={{ status_filter|urlencode }}&profession=1{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if profession_filter == '1' %}active{% endif %}">Техподдержка</a>
+                        <a href="?status={{ status_filter|urlencode }}&profession=2{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if profession_filter == '2' %}active{% endif %}">Директор</a>
+                        <a href="?status={{ status_filter|urlencode }}&profession=3{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if profession_filter == '3' %}active{% endif %}">Консультант</a>
+                        <a href="?status={{ status_filter|urlencode }}&profession=4{% if unread_filter %}&unread={{ unread_filter|urlencode }}{% endif %}{% if client_filter %}&client_id={{ client_filter|urlencode }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="btn {% if profession_filter == '4' %}active{% endif %}">Разрешительная документация</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="stats-bar" style="padding-top: 0;">
+                    <form method="get" class="filter-bar" style="margin-left: 0; width: 100%; gap: 0.5rem;">
+                        {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+                        {% if profession_filter %}<input type="hidden" name="profession" value="{{ profession_filter }}">{% endif %}
+                        {% if unread_filter %}<input type="hidden" name="unread" value="{{ unread_filter }}">{% endif %}
+                        {% if client_filter %}<input type="hidden" name="client_id" value="{{ client_filter }}">{% endif %}
+                        <input type="search" name="q" value="{{ search_query }}" placeholder="Поиск по имени, телефону, ИНН или ID чата" style="flex: 1; min-width: 260px; padding: 0.65rem 0.8rem; border: 2px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.9rem;">
+                        <button type="submit" class="btn btn-primary">Найти</button>
+                        {% if search_query %}
+                        <a href="?{% if status_filter %}status={{ status_filter|urlencode }}&{% endif %}{% if profession_filter %}profession={{ profession_filter|urlencode }}&{% endif %}{% if unread_filter %}unread={{ unread_filter|urlencode }}&{% endif %}{% if client_filter %}client_id={{ client_filter|urlencode }}{% endif %}" class="btn">Сбросить</a>
+                        {% endif %}
+                    </form>
+                </div>
+
+                <div class="table-wrapper">
+                {% if chats %}
+                <table class="chat-list-table">
+                    <thead class="chat-list-head">
+                        <tr>
+                            <th>Список чатов</th>
+                        </tr>
+                    </thead>
+                    <tbody class="chat-list-body">
+                        {% for c in chats %}
+                        <tr data-chat-id="{{ c.id }}"
+                            data-last-message-id="0"
+                            data-request-type="{{ c.request_type|default:'' }}"
+                            onclick="openChatEntry({{ c.id }}, '{{ c.status }}', '{{ c.request_type|default:'' }}', '{% if is_director %}{% url 'bot_app:crm_chat_detail' c.id %}{% else %}{% url 'bot_app:specialist_chat' c.id %}{% endif %}?next={{ request.get_full_path|urlencode }}')"
+                            class="chat-card-row {% if c.has_new_client_response %}chat-row-unread{% endif %} {% if c.status == 'closed' %}chat-row-closed{% endif %}">
+                            <td class="chat-card-cell">
+                                <div class="chat-card">
+                                    <div class="chat-card-main">
+                                        <div class="chat-card-content">
+                                            <div class="chat-card-topline">
+                                                <span class="chat-id-wrap">
+                                                    <span class="new-message-dot {% if c.has_new_client_response %}visible{% endif %}" title="Есть новое сообщение"></span>
+                                                    <span class="chat-id {% if c.has_new_client_response %}is-unread{% endif %}">#{{ c.id }}</span>
+                                                </span>
+                                                {% if c.status == 'active' %}
+                                                <span class="badge badge-success">Активен</span>
+                                                {% elif c.status == 'pending' %}
+                                                <span class="badge badge-warning">Ожидает</span>
+                                                {% elif c.status == 'consultation' %}
+                                                <span class="badge badge-info">Консультация</span>
+                                                {% elif c.status == 'closed' %}
+                                                <span class="badge badge-secondary">Закрыт</span>
+                                                {% else %}
+                                                <span class="badge badge-secondary">{{ c.status }}</span>
+                                                {% endif %}
+                                                <span class="unread-status-pill {% if c.has_new_client_response %}visible{% endif %}">Новое</span>
+                                                <span class="unread-count-badge" {% if not c.unread_count or c.unread_count <= 0 %}style="display:none;"{% endif %}>{{ c.unread_count|default:'' }}</span>
+                                            </div>
+
+                                            <div class="chat-card-client-line">
+                                                {% if c.client_user_id %}
+                                                <a class="chat-client-name" href="{% url 'bot_app:crm_client_detail' c.client_user_id %}" onclick="event.stopPropagation();">
+                                                    {% if c.display_client_prefix %}{{ c.display_client_prefix }}: {% endif %}{{ c.display_client_name }}
+                                                </a>
+                                                {% else %}
+                                                <span class="chat-client-name">Клиент не указан</span>
+                                                {% endif %}
+                                                {% if c.client_phone %}<span class="chat-client-phone">{{ c.client_phone }}</span>{% endif %}
+                                            </div>
+                                            {% if c.client_inn %}<div class="chat-client-inn">ИНН: {{ c.client_inn }}</div>{% endif %}
+
+                                            <div class="chat-preview">
+                                                {% if c.last_message_preview %}
+                                                    {{ c.last_message_preview }}
+                                                {% else %}
+                                                    <span class="chat-preview-empty">Последнее сообщение пока отсутствует</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <div class="chat-card-side">
+                                            <div class="chat-activity-time">{{ c.last_activity_at|ru_datetime }}</div>
+                                            {% if c.created_at %}<div class="chat-created-time">создан: {{ c.created_at|ru_datetime }}</div>{% endif %}
+                                        </div>
+
+                                        <div class="action-cell" data-chat-id="{{ c.id }}" data-specialist-id="{{ c.specialist_id|default:'0' }}" data-status="{{ c.status }}">
+                                            {% if c.status != 'closed' %}
+                                            <button class="action-btn" onclick="toggleActionDropdown(event, {{ c.id }})" title="Действия">&#8942;</button>
+                                            <div class="action-dropdown" id="action-dropdown-{{ c.id }}">
+                                                <a class="action-dropdown-item" href="{% if is_director %}{% url 'bot_app:crm_chat_detail' c.id %}{% else %}{% url 'bot_app:specialist_chat' c.id %}{% endif %}?next={{ request.get_full_path|urlencode }}" onclick="event.stopPropagation();">
+                                                    <span class="action-icon">&#128172;</span>
+                                                    <span class="action-label">Открыть чат</span>
+                                                </a>
+                                                {% if is_director %}
+                                                <div class="action-dropdown-divider"></div>
+                                                <button class="action-dropdown-item" onclick="openTransferFromDropdown(event, {{ c.id }}, {{ c.specialist_id|default:'0' }})">
+                                                    <span class="action-icon">&#128100;</span>
+                                                    <span class="action-label">Сменить специалиста</span>
+                                                </button>
+                                                <div class="action-dropdown-divider"></div>
+                                                {% endif %}
+                                                {% if c.request_type != 'partner_director' %}
+                                                    <button class="action-dropdown-item danger" onclick="forceCloseChat(event, {{ c.id }})">
+                                                        <span class="action-icon">&#128274;</span>
+                                                        <span class="action-label">Закрыть обращение</span>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                            {% else %}
+                                            <span class="closed-action-label">Закрыт</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="chat-card-meta" aria-label="Дополнительная информация">
+                                        <span class="meta-badge">
+                                            <span class="meta-label">Отдел</span>
+                                            <span class="meta-value">
+                                                {% if c.profession == 0 %}Бухгалтер
+                                                {% elif c.profession == 1 %}Техподдержка
+                                                {% elif c.profession == 2 %}Директор
+                                                {% elif c.profession == 3 %}Консультант
+                                                {% elif c.profession == 4 %}Разрешительная документация
+                                                {% else %}#{{ c.profession }}{% endif %}
+                                            </span>
+                                        </span>
+                                        <span class="meta-badge">
+                                            <span class="meta-label">Специалист</span>
+                                            <span class="meta-value chat-meta-specialist">
+                                                {% if c.specialist_id and c.specialist_name %}
+                                                <a href="{% url 'bot_app:specialists_manage' %}?highlight={{ c.specialist_id }}" onclick="event.stopPropagation();">{{ c.specialist_name }}</a>
+                                                {% else %}Не назначен{% endif %}
+                                            </span>
+                                        </span>
+                                        <span class="meta-badge">
+                                            <span class="meta-label">Источник</span>
+                                            <span class="meta-value">
+                                                {% if c.tg_user_id and c.max_user_id %}TG+Max
+                                                {% elif c.tg_user_id %}Телеграм
+                                                {% elif c.max_user_id %}Max
+                                                {% elif c.source %}{{ c.source }}
+                                                {% else %}CRM{% endif %}
+                                            </span>
+                                        </span>
+                                        <span class="meta-badge">
+                                            <span class="meta-label">Категория</span>
+                                            <span class="meta-value">{% if c.is_partner_director %}Партнёр · {% endif %}{{ c.category|default:"-" }}</span>
+                                        </span>
+                                        <span class="meta-badge {% if c.status == 'pending' and c.wait_time %}meta-badge-alert{% endif %}">
+                                            <span class="meta-label">Ожидание</span>
+                                            <span class="meta-value">{{ c.wait_time|default:"-" }}</span>
+                                        </span>
+                                        <span class="meta-badge {% if c.status == 'active' or c.status == 'consultation' %}meta-badge-process{% endif %}">
+                                            <span class="meta-label">Обработка</span>
+                                            <span class="meta-value">{{ c.process_time|default:"-" }}</span>
+                                        </span>
+                                        <span class="meta-badge">
+                                            <span class="meta-label">Сообщений</span>
+                                            <span class="meta-value msg-count">{{ c.message_count|default:0 }}</span>
+                                        </span>
+                                        <span class="meta-badge">
+                                            <span class="meta-label">Оплачено</span>
+                                            <span class="meta-value">{% if c.total_paid %}<span class="paid-amount">{{ c.total_paid }} &#8381;</span>{% else %}-{% endif %}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="icon">💬</div>
+                    <h3>Чатов не найдено</h3>
+                    <p>Попробуйте изменить фильтры</p>
+                </div>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка истории чата -->
+    <div id="chat-history-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>&#128172; История сообщений чата #<span id="chat-history-id"></span></h3>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <button id="modal-close-chat-btn" onclick="modalCloseChat()" style="display:none;padding:0.4rem 0.9rem;background:#27ae60;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;">✅ Завершить обращение</button>
+                    <button class="modal-close" onclick="closeChatHistory()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" id="chat-history-body" style="max-height: 450px; overflow-y: auto;">
+                <div class="empty-state">Загрузка...</div>
+            </div>
+            <div class="chat-reply-form">
+                <div id="chat-file-preview" style="display:none; background: #e8f0fe; border: 2px solid #667eea; border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; align-items: center; gap: 0.5rem;">
+                    <span id="chat-file-name" style="flex: 1; font-size: 0.85rem; color: #667eea; font-weight: 600;"></span>
+                    <span id="chat-file-size" style="font-size: 0.75rem; color: #95a5a6;"></span>
+                    <button onclick="removeChatFile()" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 1.2rem;">&times;</button>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                    <button onclick="document.getElementById('chat-file-input').click()" title="Прикрепить файл" style="background: none; border: 2px solid #ecf0f1; color: #667eea; width: 44px; height: 44px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                    </button>
+                    <input type="file" id="chat-file-input" style="display:none" onchange="onChatFileSelected(this)">
+                    <textarea id="chat-reply-text" placeholder="Введите ответ..." style="flex: 1; padding: 0.75rem; border: 2px solid #ecf0f1; border-radius: 8px; resize: none; font-family: inherit; font-size: 0.95rem;" rows="2"></textarea>
+                    <button id="chat-reply-btn" onclick="handleChatSend()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap;">Отправить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка переназначения -->
+    <div id="chat-transfer-modal" class="modal">
+        <div class="modal-content" style="max-width:560px;">
+            <div class="modal-header">
+                <h3>Смена специалиста для чата #<span id="chat-transfer-id"></span></h3>
+                <button class="modal-close" onclick="closeTransferModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="transfer-current-spec" style="font-size:0.85rem;color:#6c757d;margin-bottom:0.75rem;"></div>
+                <div id="transfer-loading" style="display:none;text-align:center;padding:1.5rem;color:#95a5a6;">
+                    <div style="font-size:1.2rem;margin-bottom:0.5rem;">&#8987;</div>
+                    <div>Загрузка списка специалистов...</div>
+                </div>
+                <div id="transfer-error" style="display:none;text-align:center;padding:1rem;background:#fff2f1;border-radius:8px;color:#e74c3c;font-size:0.9rem;"></div>
+                <div id="transfer-empty" style="display:none;text-align:center;padding:1.5rem;color:#95a5a6;">
+                    <div style="font-size:2rem;margin-bottom:0.5rem;">&#128100;</div>
+                    <div>Нет доступных специалистов</div>
+                </div>
+                <div id="transfer-select-block">
+                    <div style="font-size:0.9rem;color:#6c757d;margin-bottom:0.5rem;">Выберите нового специалиста:</div>
+                    <div class="transfer-controls">
+                        <select id="chat-transfer-specialist" style="flex:1;min-width:0;">
+                            <option value="">Выберите специалиста…</option>
+                        </select>
+                        <button id="chat-transfer-btn" class="btn btn-primary" onclick="submitChatTransfer()" style="white-space:nowrap;">
+                            <span id="chat-transfer-btn-text">Передать чат</span>
+                            <span id="chat-transfer-btn-spinner" style="display:none;">&#8987; Передача...</span>
+                        </button>
+                    </div>
+                    <div id="transfer-hint" style="font-size:0.8rem;color:#95a5a6;margin-top:0.35rem;">Чат будет передан выбранному специалисту с полной историей сообщений</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Просмотр изображений -->
+    <div class="chat-image-modal" id="chat-img-modal" onclick="closeChatImage()">
+        <button class="close-img" onclick="closeChatImage()">&times;</button>
+        <img id="chat-modal-img" src="" alt="">
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" style="display:none; position:fixed; bottom:2rem; right:2rem; padding:1rem 1.5rem; border-radius:8px; color:white; font-weight:500; z-index:2000;"></div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+<script>
+    const canForceCloseChat = {% if is_director %}true{% else %}false{% endif %};
+    var currentChatId = null;
+    var currentChatSpecialistId = null;
+    var specialistsForTransfer = {{ specialists|default:'[]'|safe }};
+    var chatSelectedFile = null;
+    var chatStatePollTimer = null;
+    var openedChatState = {};
+
+    /* ===== Unread indicator dismissal ===== */
+    function dismissUnreadIndicator(chatId) {
+        var row = document.querySelector('tr[data-chat-id="' + chatId + '"]');
+        if (!row) return;
+        row.classList.remove('chat-row-unread');
+        var dot = row.querySelector('.new-message-dot');
+        if (dot) dot.classList.remove('visible');
+        var idSpan = row.querySelector('.chat-id');
+        if (idSpan) idSpan.classList.remove('is-unread');
+        var statusPill = row.querySelector('.unread-status-pill');
+        if (statusPill) statusPill.classList.remove('visible');
+        var badge = row.querySelector('.unread-count-badge');
+        if (badge) {
+            badge.textContent = '';
+            badge.style.display = 'none';
+        }
+    }
+
+    function setUnreadFilterCount(count) {
+        var el = document.getElementById('unread-filter-count');
+        if (!el) return;
+        var val = Number(count || 0);
+        if (val > 0) {
+            el.textContent = val > 99 ? '99+' : String(val);
+            el.style.display = 'inline-flex';
+        } else {
+            el.textContent = '';
+            el.style.display = 'none';
+        }
+    }
+
+    function applyChatUnreadState(state) {
+        if (!state || typeof state.id === 'undefined') return;
+        var chatId = Number(state.id);
+        var row = document.querySelector('tr[data-chat-id="' + chatId + '"]');
+        if (!row) return;
+
+        var lastMessageId = Number(state.last_message_id || 0);
+        if (lastMessageId > 0) {
+            row.setAttribute('data-last-message-id', String(lastMessageId));
+        }
+
+        var openedState = openedChatState[chatId];
+        if (openedState && lastMessageId > 0 && lastMessageId <= Number(openedState.lastReadMessageId || 0)) {
+            dismissUnreadIndicator(chatId);
+            return;
+        }
+
+        var hasNew = Boolean(state.has_new_client_response);
+        var unreadCount = Number(state.unread_count || 0);
+        var dot = row.querySelector('.new-message-dot');
+        var idSpan = row.querySelector('.chat-id');
+        var badge = row.querySelector('.unread-count-badge');
+        var statusPill = row.querySelector('.unread-status-pill');
+
+        if (hasNew || unreadCount > 0) {
+            row.classList.add('chat-row-unread');
+            if (dot) dot.classList.add('visible');
+            if (idSpan) idSpan.classList.add('is-unread');
+            if (statusPill) statusPill.classList.add('visible');
+        } else {
+            row.classList.remove('chat-row-unread');
+            if (dot) dot.classList.remove('visible');
+            if (idSpan) idSpan.classList.remove('is-unread');
+            if (statusPill) statusPill.classList.remove('visible');
+        }
+
+        if (badge) {
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.textContent = '';
+                badge.style.display = 'none';
+            }
+        }
+    }
+
+    function refreshUnreadState() {
+        var rows = Array.prototype.slice.call(document.querySelectorAll('tr[data-chat-id]'));
+        if (!rows.length) {
+            setUnreadFilterCount(0);
+            return;
+        }
+
+        var ids = rows.map(function(row) {
+            return row.getAttribute('data-chat-id');
+        }).filter(Boolean);
+
+        var params = new URLSearchParams(window.location.search || '');
+        params.set('chat_ids', ids.join(','));
+
+        fetch('/api/crm/chats/unread-state/?' + params.toString(), { cache: 'no-store' })
+            .then(function(r) {
+                if (!r.ok) throw new Error('Network error');
+                return r.json();
+            })
+            .then(function(data) {
+                if (!data || !data.success) return;
+                setUnreadFilterCount(data.unread_chats_count || 0);
+                (data.chats || []).forEach(function(chatState) {
+                    applyChatUnreadState(chatState);
+                });
+            })
+            .catch(function() {
+                // silent fail: не мешаем работе UI
+            });
+    }
+
+    function startUnreadStatePolling() {
+        refreshUnreadState();
+        if (chatStatePollTimer) clearInterval(chatStatePollTimer);
+        chatStatePollTimer = setInterval(refreshUnreadState, 7000);
+    }
+
+    function getCsrfToken() {
+        var el = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (el) return el.value;
+        var c = document.cookie.match(/csrftoken=([^;]+)/);
+        return c ? c[1] : '';
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        var d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    function showToast(msg, type) {
+        var t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.background = type === 'error' ? '#e74c3c' : '#27ae60';
+        t.style.display = 'block';
+        setTimeout(function() { t.style.display = 'none'; }, 3000);
+    }
+
+    /* ===== Action Dropdown ===== */
+    var activeDropdownId = null;
+
+    function toggleActionDropdown(event, chatId) {
+        event.stopPropagation();
+        event.preventDefault();
+        var dropdown = document.getElementById('action-dropdown-' + chatId);
+        if (!dropdown) return;
+        // Закрыть все остальные dropdown
+        closeAllDropdowns();
+        if (dropdown.classList.contains('active')) {
+            dropdown.classList.remove('active');
+            activeDropdownId = null;
+        } else {
+            dropdown.classList.add('active');
+            activeDropdownId = chatId;
+        }
+    }
+
+    function closeAllDropdowns() {
+        document.querySelectorAll('.action-dropdown.active').forEach(function(d) {
+            d.classList.remove('active');
+        });
+        activeDropdownId = null;
+    }
+
+    function openTransferFromDropdown(event, chatId, specialistId) {
+        event.stopPropagation();
+        closeAllDropdowns();
+        openTransferModal(null, chatId, specialistId);
+    }
+
+    // Закрытие dropdown при клике вне
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.action-cell')) {
+            closeAllDropdowns();
+        }
+    });
+
+    /* ===== Transfer Modal ===== */
+    function setTransferState(state) {
+        var loadingEl = document.getElementById('transfer-loading');
+        var errorEl = document.getElementById('transfer-error');
+        var emptyEl = document.getElementById('transfer-empty');
+        var selectBlock = document.getElementById('transfer-select-block');
+        var currentSpec = document.getElementById('transfer-current-spec');
+
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'none';
+        emptyEl.style.display = 'none';
+        selectBlock.style.display = 'none';
+        if (currentSpec) currentSpec.style.display = 'none';
+
+        switch(state) {
+            case 'loading':
+                loadingEl.style.display = 'block';
+                break;
+            case 'error':
+                errorEl.style.display = 'block';
+                break;
+            case 'empty':
+                emptyEl.style.display = 'block';
+                break;
+            case 'select':
+                selectBlock.style.display = 'block';
+                if (currentSpec) currentSpec.style.display = 'block';
+                break;
+        }
+    }
+
+    function buildTransferOptions(currentSpecialistId) {
+        var select = document.getElementById('chat-transfer-specialist');
+        if (!select) return;
+        var specs = specialistsForTransfer || [];
+        var available = specs.filter(function(spec) {
+            return Number(spec.id || 0) !== Number(currentSpecialistId);
+        });
+
+        if (available.length === 0) {
+            setTransferState('empty');
+            return;
+        }
+
+        var html = '<option value="">Выберите специалиста…</option>';
+        available.forEach(function(spec) {
+            var name = spec.name || ('Специалист #' + spec.id);
+            // Обрезаем длинные имена
+            if (name.length > 40) name = name.substring(0, 37) + '...';
+            html += '<option value="' + spec.id + '">' + escapeHtml(name) + '</option>';
+        });
+        select.innerHTML = html;
+        setTransferState('select');
+    }
+
+    function openTransferModal(event, chatId, specialistId) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        currentChatId = chatId;
+        currentChatSpecialistId = Number(specialistId || 0);
+        document.getElementById('chat-transfer-id').textContent = chatId;
+
+        // Показать текущего специалиста
+        var currentSpecEl = document.getElementById('transfer-current-spec');
+        if (currentSpecEl) {
+            var currentSpec = specialistsForTransfer.find(function(s) {
+                return Number(s.id || 0) === currentChatSpecialistId;
+            });
+            var specName = currentSpec ? (currentSpec.name || ('Специалист #' + currentSpec.id)) : 'Не назначен';
+            currentSpecEl.innerHTML = 'Текущий специалист: <strong>' + escapeHtml(specName) + '</strong>';
+            currentSpecEl.style.display = 'block';
+        }
+
+        // Reset button state
+        var btnText = document.getElementById('chat-transfer-btn-text');
+        var btnSpinner = document.getElementById('chat-transfer-btn-spinner');
+        var btn = document.getElementById('chat-transfer-btn');
+        if (btnText) btnText.textContent = 'Передать чат';
+        if (btnSpinner) btnSpinner.style.display = 'none';
+        if (btn) { btn.disabled = false; }
+
+        setTransferState('loading');
+        document.getElementById('chat-transfer-modal').classList.add('active');
+
+        // Загрузить актуальный список специалистов
+        loadSpecialistsForTransfer(currentChatSpecialistId);
+    }
+
+    function loadSpecialistsForTransfer(currentSpecialistId) {
+        // Пробуем загрузить с API, fallback на предзагруженные
+        fetch('/api/crm/specialists/')
+            .then(function(r) {
+                if (!r.ok) throw new Error('Network error');
+                return r.json();
+            })
+            .then(function(data) {
+                var specs = data.specialists || data || [];
+                if (specs.length > 0) {
+                    specialistsForTransfer = specs;
+                }
+                buildTransferOptions(currentSpecialistId);
+            })
+            .catch(function() {
+                // Fallback на предзагруженные данные
+                buildTransferOptions(currentSpecialistId);
+            });
+    }
+
+    function closeTransferModal() {
+        document.getElementById('chat-transfer-modal').classList.remove('active');
+        currentChatId = null;
+        currentChatSpecialistId = null;
+    }
+
+
+    function openChatEntry(chatId, chatStatus, chatRequestType, chatUrl) {
+        // Для директора и для единообразия UX открываем единый экран чата,
+        // чтобы не было двух разных отрисовок (модалка vs отдельная страница).
+        if (chatUrl) {
+            window.location.href = chatUrl;
+            return;
+        }
+        openChatHistory(chatId, chatStatus, chatRequestType);
+    }
+
+    function openChatHistory(chatId, chatStatus, chatRequestType) {
+        currentChatId = chatId;
+        var row = document.querySelector('tr[data-chat-id="' + chatId + '"]');
+        var currentLastMessageId = row ? Number(row.getAttribute('data-last-message-id') || 0) : 0;
+        openedChatState[chatId] = { lastReadMessageId: currentLastMessageId };
+        document.getElementById('chat-history-id').textContent = chatId;
+        document.getElementById('chat-history-body').innerHTML = '<div style="text-align:center;padding:2rem;color:#95a5a6;">Загрузка сообщений...</div>';
+        document.getElementById('chat-reply-text').value = '';
+        // Показываем кнопку завершения только для незакрытых чатов
+        var closeBtn = document.getElementById('modal-close-chat-btn');
+        if (closeBtn) {
+            var canClose = !!chatStatus && chatStatus !== 'closed' && String(chatRequestType || '').toLowerCase() !== 'partner_director';
+            closeBtn.style.display = canClose ? 'inline-block' : 'none';
+        }
+        document.getElementById('chat-history-modal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+        // Снимаем индикатор непрочитанного при открытии чата
+        dismissUnreadIndicator(chatId);
+        loadChatMessages(chatId);
+    }
+
+    function submitChatTransfer() {
+        if (!currentChatId) return;
+        var select = document.getElementById('chat-transfer-specialist');
+        var newSpecialistId = Number(select ? select.value : 0);
+        if (!newSpecialistId) {
+            showToast('Выберите нового специалиста', 'error');
+            return;
+        }
+        if (newSpecialistId === Number(currentChatSpecialistId || 0)) {
+            showToast('Этот специалист уже назначен', 'error');
+            return;
+        }
+        if (!confirm('Передать чат выбранному специалисту?')) return;
+
+        // Loading state
+        var btn = document.getElementById('chat-transfer-btn');
+        var btnText = document.getElementById('chat-transfer-btn-text');
+        var btnSpinner = document.getElementById('chat-transfer-btn-spinner');
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.style.display = 'none';
+        if (btnSpinner) btnSpinner.style.display = 'inline';
+
+        fetch('/api/crm/chat/' + currentChatId + '/transfer/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({specialist_id: newSpecialistId})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.success) throw new Error(data.error || 'Ошибка передачи');
+            showToast(data.message || 'Чат передан');
+
+            // Inline update строки таблицы
+            updateChatRowSpecialist(currentChatId, newSpecialistId);
+
+            closeTransferModal();
+        })
+        .catch(function(err) {
+            showToast(err.message || 'Ошибка передачи', 'error');
+        })
+        .finally(function() {
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.style.display = 'inline';
+            if (btnSpinner) btnSpinner.style.display = 'none';
+        });
+    }
+
+    function updateChatRowSpecialist(chatId, newSpecialistId) {
+        // Найти карточку по data-chat-id
+        var tr = document.querySelector('tr[data-chat-id="' + chatId + '"]');
+        if (!tr) { window.location.reload(); return; }
+
+        // Найти специалиста по ID
+        var spec = specialistsForTransfer.find(function(s) {
+            return Number(s.id || 0) === Number(newSpecialistId);
+        });
+        var specName = spec ? (spec.name || ('Специалист #' + spec.id)) : 'Не назначен';
+
+        // Обновить meta-бейдж специалиста в карточке
+        var specValue = tr.querySelector('.chat-meta-specialist');
+        if (specValue) {
+            specValue.innerHTML = '<a href="/specialists/?highlight=' + newSpecialistId + '" onclick="event.stopPropagation();">' + escapeHtml(specName) + '</a>';
+        }
+
+        // Обновить data-specialist-id у блока действий
+        var actionCell = tr.querySelector('.action-cell');
+        if (actionCell) actionCell.setAttribute('data-specialist-id', newSpecialistId);
+    }
+
+    function modalCloseChat() {
+        if (!currentChatId) return;
+        if (!confirm('Завершить это обращение?')) return;
+        var btn = document.getElementById('modal-close-chat-btn');
+        if (btn) { btn.disabled = true; btn.textContent = '...'; }
+        var closeUrl = canForceCloseChat
+            ? ('/api/crm/chat/' + currentChatId + '/force-close/')
+            : ('/api/chat/' + currentChatId + '/close/');
+        fetch(closeUrl, {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCsrfToken()}
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.success) throw new Error(data.error || 'Ошибка');
+            showToast(data.message || 'Обращение закрыто');
+            appendChatSystemEvent(data.message || 'Статус обращения обновлён');
+            if (btn) {
+                btn.textContent = data.just_closed ? '✅ Обращение завершено' : '⏳ Запрос отправлен';
+                btn.style.background = data.just_closed ? '#27ae60' : '#f39c12';
+                btn.disabled = true;
+            }
+            if (data.just_closed) {
+                setTimeout(function() {
+                    closeChatHistory();
+                    window.location.reload();
+                }, 900);
+            }
+        })
+        .catch(function(err) {
+            showToast(err.message || 'Ошибка закрытия', 'error');
+            if (btn) { btn.disabled = false; btn.textContent = '✅ Завершить обращение'; }
+        });
+    }
+
+    function closeChatHistory() {
+        document.getElementById('chat-history-modal').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function formatFileSize(bytes) {
+        if (!bytes) return '';
+        if (bytes < 1024) return bytes + ' Б';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+    }
+
+    function appendChatSystemEvent(text) {
+        var body = document.getElementById('chat-history-body');
+        if (!body) return;
+        var eventNode = document.createElement('div');
+        eventNode.className = 'chat-system-event';
+        eventNode.textContent = text || 'Статус обращения обновлён';
+        body.appendChild(eventNode);
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function renderMsgContent(msg) {
+        var html = '';
+        var hasFile = msg.file_id;
+        var mime = msg.file_mime || '';
+        var isImage = mime.startsWith('image/');
+        var isVideo = mime.startsWith('video/');
+
+        if (hasFile && isImage) {
+            html += '<img class="chat-msg-image" src="' + msg.file_url + '" alt="' + escapeHtml(msg.file_name) + '" onclick="event.stopPropagation();openChatImage(this.src)" loading="lazy">';
+        } else if (hasFile && isVideo) {
+            html += '<video class="chat-msg-video" controls preload="metadata"><source src="' + msg.file_url + '" type="' + mime + '"></video>';
+        } else if (hasFile) {
+            html += '<a class="chat-msg-file" href="' + msg.file_url + '" target="_blank" download onclick="event.stopPropagation();">' +
+                '<span>&#128196;</span> <span>' + escapeHtml(msg.file_name) + '</span> <span style="font-size:0.75rem;color:#95a5a6;">' + formatFileSize(msg.file_size) + '</span></a>';
+        }
+
+        var autoCaption = hasFile ? ('\uD83D\uDCCE ' + msg.file_name) : '';
+        if (!hasFile || (msg.text && msg.text !== autoCaption)) {
+            html += '<div class="text">' + escapeHtml(msg.text) + '</div>';
+        }
+        return html;
+    }
+
+    function loadChatMessages(chatId) {
+        fetch('/api/chat-messages/' + chatId + '/')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var body = document.getElementById('chat-history-body');
+                if (data.messages && data.messages.length > 0) {
+                    var lastMsg = data.messages[data.messages.length - 1];
+                    if (lastMsg && lastMsg.id) {
+                        openedChatState[chatId] = { lastReadMessageId: Number(lastMsg.id) };
+                        var row = document.querySelector('tr[data-chat-id="' + chatId + '"]');
+                        if (row) row.setAttribute('data-last-message-id', String(lastMsg.id));
+                    }
+                    var html = '';
+                    data.messages.forEach(function(msg) {
+                        var isClient = msg.sender === 'client' || msg.sender === 0;
+                        html += '<div class="chat-message ' + (isClient ? 'client' : 'specialist') + '">' +
+                            '<div class="sender">' + (isClient ? '&#128100; Клиент' : '&#128188; Специалист') + '</div>' +
+                            renderMsgContent(msg) +
+                            '<div class="time">' + escapeHtml(msg.created_at_display || msg.created_at || '') + '</div></div>';
+                    });
+                    body.innerHTML = html;
+                    body.scrollTop = body.scrollHeight;
+                } else {
+                    body.innerHTML = '<div style="text-align:center;padding:2rem;color:#95a5a6;">Нет сообщений</div>';
+                }
+            })
+            .catch(function() {
+                document.getElementById('chat-history-body').innerHTML = '<div style="text-align:center;padding:2rem;color:#e74c3c;">Ошибка загрузки</div>';
+            });
+    }
+
+    function onChatFileSelected(input) {
+        var file = input.files[0];
+        if (!file) return;
+        if (file.size > 25 * 1024 * 1024) { alert('Макс. 25 МБ'); input.value = ''; return; }
+        chatSelectedFile = file;
+        document.getElementById('chat-file-name').textContent = file.name;
+        document.getElementById('chat-file-size').textContent = formatFileSize(file.size);
+        document.getElementById('chat-file-preview').style.display = 'flex';
+    }
+
+    function removeChatFile() {
+        chatSelectedFile = null;
+        document.getElementById('chat-file-input').value = '';
+        document.getElementById('chat-file-preview').style.display = 'none';
+    }
+
+    function handleChatSend() {
+        if (chatSelectedFile) { uploadChatFile(); } else { sendChatReply(); }
+    }
+
+    function forceCloseChat(event, chatId) {
+        event.stopPropagation();
+        if (!confirm('Досрочно закрыть это обращение?')) return;
+
+        fetch('/api/crm/chat/' + chatId + '/force-close/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCsrfToken()}
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.success) throw new Error(data.error || 'Ошибка закрытия');
+            showToast(data.message || 'Обращение закрыто');
+            setTimeout(function() { window.location.reload(); }, 500);
+        })
+        .catch(function(err) {
+            showToast(err.message || 'Ошибка закрытия', 'error');
+        });
+    }
+
+    function sendChatReply() {
+        if (!currentChatId) return;
+        var text = document.getElementById('chat-reply-text').value.trim();
+        if (!text) return;
+        var btn = document.getElementById('chat-reply-btn');
+        btn.disabled = true;
+        btn.textContent = '...';
+        fetch('/api/chat/' + currentChatId + '/send/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({text: text})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false; btn.textContent = 'Отправить';
+            if (data.success) {
+                document.getElementById('chat-reply-text').value = '';
+                loadChatMessages(currentChatId);
+            } else { showToast(data.error || 'Ошибка', 'error'); }
+        })
+        .catch(function() { btn.disabled = false; btn.textContent = 'Отправить'; showToast('Ошибка сети', 'error'); });
+    }
+
+    function uploadChatFile() {
+        if (!chatSelectedFile || !currentChatId) return;
+        var btn = document.getElementById('chat-reply-btn');
+        btn.disabled = true; btn.textContent = 'Загрузка...';
+        var fd = new FormData();
+        fd.append('file', chatSelectedFile);
+        var text = document.getElementById('chat-reply-text').value.trim();
+        if (text) fd.append('text', text);
+        fetch('/api/chat/' + currentChatId + '/upload/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCsrfToken()},
+            body: fd
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false; btn.textContent = 'Отправить';
+            if (data.success) {
+                removeChatFile();
+                document.getElementById('chat-reply-text').value = '';
+                loadChatMessages(currentChatId);
+            } else { showToast(data.error || 'Ошибка', 'error'); }
+        })
+        .catch(function() { btn.disabled = false; btn.textContent = 'Отправить'; showToast('Ошибка сети', 'error'); });
+    }
+
+    function openChatImage(src) {
+        document.getElementById('chat-modal-img').src = src;
+        document.getElementById('chat-img-modal').classList.add('active');
+    }
+
+    function closeChatImage() {
+        document.getElementById('chat-img-modal').classList.remove('active');
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAllDropdowns();
+            closeTransferModal();
+            closeChatHistory();
+            closeChatImage();
+        }
+    });
+
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            refreshUnreadState();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        startUnreadStatePolling();
+    });
+    </script>
+</body>
+</html>

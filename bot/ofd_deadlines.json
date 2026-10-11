@@ -1,0 +1,30 @@
+{
+    "4": {
+        "name": "12 месяцев",
+        "months_number": 12
+    },
+    "5": {
+        "name": "15 месяцев",
+        "months_number": 15
+    },
+    "6": {
+        "name": "36 месяцев",
+        "months_number": 36
+    },
+    "9": {
+        "name": "Разовый код",
+        "months_number": null
+    },
+    "10": {
+        "name": "13 месяцев",
+        "months_number": 13
+    },
+    "12": {
+        "name": "Универсальный код",
+        "months_number": null
+    },
+    "11": {
+        "name": "Бессрочная лицензия",
+        "months_number": null
+    }
+}

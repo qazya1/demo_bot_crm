@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Новый клиент - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd8;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(env(safe-area-inset-left), 0);
+                padding-right: max(env(safe-area-inset-right), 0);
+                padding-bottom: max(env(safe-area-inset-bottom), 0);
+            }
+        }
+        .header {
+            background: var(--color-card-bg);
+            padding: var(--spacing-md) var(--spacing-xl);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding-top: max(env(safe-area-inset-top), var(--spacing-md));
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 600; color: #2c3e50; }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+
+        /* Breadcrumb */
+        .breadcrumb { padding: var(--spacing-md) var(--spacing-xl) 0; color: var(--color-text-muted); font-size: 0.9rem; }
+        .breadcrumb a { color: var(--color-primary); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb span { margin: 0 0.5rem; }
+
+        /* Content */
+        .content { padding: var(--spacing-lg) var(--spacing-xl); }
+
+        /* Form card */
+        .form-card { background: var(--color-card-bg); border-radius: var(--radius-md); box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; max-width: 760px; }
+        .form-card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #ecf0f1; font-weight: 600; font-size: 1.05rem; color: #2c3e50; }
+
+        /* Form layout */
+        .form-body { padding: var(--spacing-lg); }
+        .form-section { margin-bottom: 1.5rem; }
+        .form-section-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #95a5a6; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #ecf0f1; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .form-row.single { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-group label { font-size: 0.85rem; font-weight: 500; color: var(--color-text); }
+        .form-group label .required { color: #e74c3c; margin-left: 2px; }
+        .form-group input {
+            padding: 0.65rem 0.9rem;
+            min-height: var(--touch-target-min);
+            border: 1.5px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+            color: var(--color-text);
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .form-group input:focus { outline: none; border-color: var(--color-primary); }
+        .form-group input.error { border-color: #e74c3c; }
+        .form-group .error-msg { font-size: 0.8rem; color: #e74c3c; }
+        .form-group .hint { font-size: 0.78rem; color: #95a5a6; }
+
+        /* Buttons */
+        .form-actions {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--color-card-hover);
+            border-top: 1px solid var(--color-border-light);
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.65rem 1.4rem;
+            min-height: var(--touch-target-min);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-primary:hover { background: var(--color-primary-dark); }
+        .btn-secondary { background: var(--color-card-bg); color: var(--color-text); border: 1.5px solid var(--color-border); }
+        .btn-secondary:hover { background: #f8f9fa; }
+
+        /* Mobile responsive */
+        .burger-menu {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--color-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            line-height: 1;
+            min-width: var(--touch-target-min);
+            min-height: var(--touch-target-min);
+        }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; }
+        .sidebar-overlay.active { display: block; }
+
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; }
+        .sidebar-overlay.active { display: block; }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .burger-menu { display: flex; align-items: center; justify-content: center; }
+            .sidebar-nav a { min-height: 48px; }
+            .header { padding: var(--spacing-sm) var(--spacing-md); gap: var(--spacing-sm); }
+            .header h1 { font-size: 1.2rem; }
+            .header-actions .btn { padding: var(--spacing-sm) var(--spacing-md); font-size: 0.8rem; min-height: var(--touch-target-min); }
+            .breadcrumb { padding: var(--spacing-sm) var(--spacing-md) 0; }
+            .content { padding: var(--spacing-sm); }
+            .form-row { grid-template-columns: 1fr; }
+            .form-body { padding: var(--spacing-md); }
+            .form-group input { font-size: 16px; min-height: var(--touch-target-min); }
+            .form-actions { padding: var(--spacing-md); flex-wrap: wrap; }
+            .form-actions .btn { min-height: var(--touch-target-min); display: inline-flex; align-items: center; justify-content: center; width: 100%; }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+        }
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .header, .form-card { background: var(--color-card-bg); }
+            .form-group input { background: var(--color-card-hover); color: var(--color-text); }
+            .btn-secondary { background: var(--color-card-hover); color: var(--color-text); }
+        }
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn:hover { transform: none; box-shadow: none; }
+            .btn:active { transform: scale(0.98); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page=partner_mode|yesno:'partner_clients,crm_clients' %}
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <h1>Новый клиент</h1>
+            <div class="header-actions">
+                <a href="{% if partner_mode %}{% url 'bot_app:partner_clients' %}{% else %}{% url 'bot_app:crm_clients' %}{% endif %}" class="btn btn-secondary">Назад к списку</a>
+            </div>
+        </div>
+
+        <div class="breadcrumb">
+            <a href="{% url 'bot_app:crm_clients' %}">Клиенты</a>
+            <span>/</span>
+            Новый клиент
+        </div>
+
+        <div class="content">
+            <div class="form-card">
+                <div class="form-card-header">Данные клиента</div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-body">
+
+                        <div class="form-section">
+                            <div class="form-section-title">Контактная информация</div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="first_name">Имя <span class="required">*</span></label>
+                                    <input type="text" id="first_name" name="first_name"
+                                           value="{{ form_data.first_name|default:'' }}"
+                                           placeholder="Иван"
+                                           class="{% if errors.first_name %}error{% endif %}">
+                                    {% if errors.first_name %}<span class="error-msg">{{ errors.first_name }}</span>{% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="last_name">Фамилия</label>
+                                    <input type="text" id="last_name" name="last_name"
+                                           value="{{ form_data.last_name|default:'' }}"
+                                           placeholder="Иванов">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="phone">Телефон</label>
+                                    <input type="tel" id="phone" name="phone"
+                                           value="{{ form_data.phone|default:'+7' }}"
+                                           placeholder="+7 900 000 00 00"
+                                           class="{% if errors.phone %}error{% endif %}">
+                                    {% if errors.phone %}<span class="error-msg">{{ errors.phone }}</span>{% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email</label>
+                                    <input type="email" id="email" name="email"
+                                           value="{{ form_data.email|default:'' }}"
+                                           placeholder="example@company.ru">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="tg_username">Telegram</label>
+                                    <input type="text" id="tg_username" name="tg_username"
+                                           value="{{ form_data.tg_username|default:'' }}"
+                                           placeholder="username (без @)">
+                                </div>
+                                <div class="form-group">
+                                    <label for="city">Город</label>
+                                    <input type="text" id="city" name="city"
+                                           value="{{ form_data.city|default:'' }}"
+                                           placeholder="Москва">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="form-section-title">Реквизиты компании</div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="inn">ИНН</label>
+                                    <input type="text" id="inn" name="inn"
+                                           value="{{ form_data.inn|default:'' }}"
+                                           placeholder="1234567890"
+                                           class="{% if errors.inn %}error{% endif %}">
+                                    {% if errors.inn %}<span class="error-msg">{{ errors.inn }}</span>{% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="kpp">КПП</label>
+                                    <input type="text" id="kpp" name="kpp"
+                                           value="{{ form_data.kpp|default:'' }}"
+                                           placeholder="123456789">
+                                </div>
+                            </div>
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label for="org_name">Название компании</label>
+                                    <input type="text" id="org_name" name="org_name"
+                                           value="{{ form_data.org_name|default:'' }}"
+                                           placeholder="ООО Ромашка">
+                                    <span class="hint">Заполните имя или название компании (хотя бы одно поле обязательно)</span>
+                                </div>
+                            </div>
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                                        <input type="checkbox" id="we_added" name="we_added" {% if form_data.we_added %}checked{% endif %} disabled>
+                                        Добавить в базу клиентов (автоматически)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="form-actions">
+                        <a href="{% if partner_mode %}{% url 'bot_app:partner_clients' %}{% else %}{% url 'bot_app:crm_clients' %}{% endif %}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-primary">Создать клиента</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        const phoneInput = document.getElementById('phone');
+        if (!phoneInput.value) phoneInput.value = '+7';
+        phoneInput.addEventListener('focus', function() {
+            if (!this.value) this.value = '+7';
+        });
+        phoneInput.addEventListener('input', function() {
+            if (!this.value.startsWith('+7')) {
+                this.value = '+7' + this.value.replace(/^\+?7?/, '');
+            }
+        });
+    </script>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

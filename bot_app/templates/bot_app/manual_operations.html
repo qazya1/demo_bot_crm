@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Ручные операции - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    {% include 'bot_app/_mobile_base_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd6;
+            --color-gradient-start: #667eea;
+            --color-gradient-end: #764ba2;
+            --color-success: #27ae60;
+            --color-danger: #e74c3c;
+            --color-warning: #f39c12;
+            --color-info: #3498db;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .page-header {
+            background: linear-gradient(135deg, var(--color-gradient-start) 0%, var(--color-gradient-end) 100%);
+            color: white;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            padding-top: max(env(safe-area-inset-top), var(--spacing-lg));
+        }
+        .page-header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: var(--spacing-xs); }
+        .page-header .subtitle { opacity: 0.9; font-size: 0.9rem; }
+        .container { max-width: none; margin: 0 auto; padding: var(--content-padding-y) var(--content-padding-x); }
+        .section {
+            background: var(--color-card-bg);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+        .card {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        .card-header { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm); border-bottom: 2px solid var(--color-border-light); }
+        .form-group { margin-bottom: var(--spacing-md); }
+        .form-group label { display: block; margin-bottom: var(--spacing-sm); font-weight: 500; font-size: 0.85rem; color: var(--color-text); }
+        .form-control {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        .form-control:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .btn-success { background: var(--color-success); color: white; }
+        .btn-success:hover { background: #229954; }
+        .btn-success:active { transform: scale(0.98); }
+        .btn-danger { background: var(--color-danger); color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-danger:active { transform: scale(0.98); }
+        .btn-warning { background: var(--color-warning); color: white; }
+        .btn-warning:hover { background: #d68910; }
+        .btn-warning:active { transform: scale(0.98); }
+        .btn-block { width: 100%; }
+        .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-secondary { background: #e2e3e5; color: #383d41; }
+        .list-group { list-style: none; }
+        .list-group-item {
+            padding: var(--spacing-md);
+            border: 1px solid var(--color-border);
+            cursor: pointer;
+            transition: background 0.2s;
+            min-height: var(--touch-target-min);
+            display: flex;
+            align-items: center;
+        }
+        .list-group-item:hover { background: var(--color-card-hover); }
+        .list-group-item:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+        .list-group-item:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+        .list-group-item + .list-group-item { border-top: none; }
+        .alert { padding: var(--spacing-md); border-radius: var(--radius-sm); margin-bottom: var(--spacing-md); }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: var(--spacing-sm); text-align: left; border-bottom: 1px solid var(--color-border-light); }
+        th { background: var(--color-card-hover); font-weight: 600; color: var(--color-text); }
+        tbody tr:hover { background: var(--color-card-hover); }
+        .text-muted { color: var(--color-text-muted); font-size: 0.8rem; }
+        .d-flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .align-center { align-items: center; }
+        .gap-1 { gap: var(--spacing-sm); }
+        .mb-2 { margin-bottom: var(--spacing-sm); }
+        .mb-3 { margin-bottom: var(--spacing-md); }
+        .mb-4 { margin-bottom: var(--spacing-lg); }
+        .row { display: flex; gap: var(--spacing-md); margin: 0 calc(-1 * var(--spacing-sm)); }
+        .col-4 { flex: 0 0 calc(33.333% - var(--spacing-md)); }
+
+        @media (max-width: 768px) {
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-overlay.open { display: block; }
+            .main-content { margin-left: 0; }
+            .burger-menu { display: flex; align-items: center; justify-content: center; }
+            .page-header { padding: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-sm); }
+            .page-header h1 { font-size: 1.25rem; margin-bottom: 0; }
+            .page-header .subtitle { display: none; }
+            .container { padding: var(--content-padding-y) var(--content-padding-x); }
+            .section { padding: var(--spacing-md); }
+            .row { flex-direction: column; }
+            .col-4 { flex: 1; }
+            .sidebar-nav a { min-height: 48px; }
+            .form-control { font-size: 16px; }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+        }
+
+        @media (max-width: 480px) {
+            .page-header h1 { font-size: 1.1rem; }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .form-control {
+                background: var(--color-card-hover);
+                color: var(--color-text);
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn-success:hover, .btn-danger:hover, .btn-warning:hover {
+                filter: none;
+            }
+            .btn-success:active, .btn-danger:active, .btn-warning:active {
+                transform: scale(0.98);
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='manual_operations' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div>
+                <h1>Ручные операции с баллами</h1>
+                <div class="subtitle">Начисление, списание и корректировка рейтинга клиентов</div>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Поиск клиента -->
+            <div class="section">
+                <h3 class="card-header">🔍 Поиск клиента</h3>
+                <div class="form-group">
+                    <input type="text" id="search-input" class="form-control"
+                           placeholder="Введите ИНН, телефон или имя клиента (минимум 3 символа)"
+                           autocomplete="off">
+                </div>
+                <div id="search-results"></div>
+            </div>
+
+            <!-- Карточка выбранного клиента -->
+            <div id="client-card" class="section" style="display: none;">
+                <h3 class="card-header">👤 Выбранный клиент</h3>
+                <div class="d-flex justify-between align-center">
+                    <div>
+                        <strong>Имя:</strong> <span id="client-name"></span><br>
+                        <strong>ИНН:</strong> <span id="client-inn"></span> |
+                        <strong>Телефон:</strong> <span id="client-phone"></span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div><strong>Баланс:</strong> <span id="client-balance" class="badge badge-success"></span></div>
+                        <div><strong>Рейтинг:</strong> <span id="client-rating" class="badge badge-info"></span></div>
+                        <div><strong>Tier:</strong> <span id="client-tier" class="badge"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Операции -->
+            <div id="operations" style="display: none;">
+                <div class="row">
+                    <!-- Начисление -->
+                    <div class="col-4">
+                        <div class="card" style="border-left: 4px solid #27ae60;">
+                            <div class="card-header" style="color: #27ae60;">💰 Начисление баллов</div>
+                            <form id="accrual-form">
+                                <input type="hidden" id="accrual-client-id">
+                                <div class="form-group">
+                                    <label>Количество баллов *</label>
+                                    <input type="number" class="form-control" id="accrual-amount" min="1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Причина *</label>
+                                    <select class="form-control" id="accrual-reason" required>
+                                        <option value="">Выберите...</option>
+                                        <option value="compensation">Компенсация</option>
+                                        <option value="promotion">Акция</option>
+                                        <option value="bonus">Бонус</option>
+                                        <option value="correction">Корректировка</option>
+                                        <option value="other">Другое</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Комментарий</label>
+                                    <textarea class="form-control" id="accrual-comment" rows="2"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Срок действия (дней)</label>
+                                    <input type="number" class="form-control" id="accrual-lifetime" placeholder="По умолчанию">
+                                </div>
+                                <button type="submit" class="btn btn-success btn-block">Начислить баллы</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Списание -->
+                    <div class="col-4">
+                        <div class="card" style="border-left: 4px solid #e74c3c;">
+                            <div class="card-header" style="color: #e74c3c;">💸 Списание баллов</div>
+                            <form id="debit-form">
+                                <input type="hidden" id="debit-client-id">
+                                <div class="form-group">
+                                    <label>Количество баллов *</label>
+                                    <input type="number" class="form-control" id="debit-amount" min="1" required>
+                                    <small class="text-muted">Доступно: <span id="debit-available">0</span> баллов</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Причина *</label>
+                                    <select class="form-control" id="debit-reason" required>
+                                        <option value="">Выберите...</option>
+                                        <option value="refund">Возврат</option>
+                                        <option value="penalty">Штраф</option>
+                                        <option value="correction">Корректировка</option>
+                                        <option value="other">Другое</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Комментарий</label>
+                                    <textarea class="form-control" id="debit-comment" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-danger btn-block">Списать баллы</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Корректировка рейтинга -->
+                    <div class="col-4">
+                        <div class="card" style="border-left: 4px solid #f39c12;">
+                            <div class="card-header" style="color: #f39c12;">⭐ Корректировка рейтинга</div>
+                            <form id="rating-form">
+                                <input type="hidden" id="rating-client-id">
+                                <div class="form-group">
+                                    <label>Изменение рейтинга *</label>
+                                    <input type="number" class="form-control" id="rating-delta" required>
+                                    <small class="text-muted">Текущий: <span id="rating-current">0</span> (+ или -)</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Причина *</label>
+                                    <select class="form-control" id="rating-reason" required>
+                                        <option value="">Выберите...</option>
+                                        <option value="manual_review">Ручной пересмотр</option>
+                                        <option value="complaint">Жалоба</option>
+                                        <option value="bonus">Бонус</option>
+                                        <option value="correction">Корректировка</option>
+                                        <option value="other">Другое</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Комментарий</label>
+                                    <textarea class="form-control" id="rating-comment" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-warning btn-block">Изменить рейтинг</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- История операций -->
+            <div class="section">
+                <h3 class="card-header">📜 История ручных операций</h3>
+                <div class="mb-3 d-flex gap-1">
+                    <button class="btn" style="background: #6c757d; color: white; padding: 0.5rem 1rem;" onclick="filterHistory('all')">Все</button>
+                    <button class="btn btn-success" style="padding: 0.5rem 1rem;" onclick="filterHistory('manual_accrual')">Начисления</button>
+                    <button class="btn btn-danger" style="padding: 0.5rem 1rem;" onclick="filterHistory('manual_debit')">Списания</button>
+                    <button class="btn btn-warning" style="padding: 0.5rem 1rem;" onclick="filterHistory('manual_rating_adjustment')">Рейтинг</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="history-table">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Клиент</th>
+                                <th>Операция</th>
+                                <th>Сумма</th>
+                                <th>Причина</th>
+                                <th>Инициатор</th>
+                                <th>Комментарий</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <tr><td colspan="7" style="text-align: center; padding: 2rem; color: #999;">Загрузка...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+    }
+
+    // CSRF Token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Notification helper
+    function showNotification(message, type) {
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const alertHtml = `
+            <div class="alert ${alertClass}" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                ${message}
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', alertHtml);
+        setTimeout(() => {
+            const alert = document.querySelector('.alert');
+            if (alert) alert.remove();
+        }, 5000);
+    }
+
+    // Client search
+    let searchTimeout = null;
+    let selectedClient = null;
+
+    document.getElementById('search-input').addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 3) {
+            document.getElementById('search-results').innerHTML = '';
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            fetch(`/api/search-client/?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(data => {
+                    displaySearchResults(data.results);
+                })
+                .catch(err => {
+                    console.error('Search failed:', err);
+                    showNotification('Ошибка поиска', 'error');
+                });
+        }, 300);
+    });
+
+    function displaySearchResults(results) {
+        const container = document.getElementById('search-results');
+        
+        if (results.length === 0) {
+            container.innerHTML = '<div class="alert alert-info">Клиенты не найдены</div>';
+            return;
+        }
+        
+        container.innerHTML = '<ul class="list-group">' + results.map(client => `
+            <li class="list-group-item" onclick='selectClient(${JSON.stringify(client)})'>
+                <div class="d-flex justify-between">
+                    <div>
+                        <strong>${client.name}</strong><br>
+                        <small>ИНН: ${client.inn} | Тел: ${client.phone}</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="badge badge-success">${client.balance} баллов</span><br>
+                        <span class="badge badge-info">Рейтинг: ${client.rating}</span>
+                    </div>
+                </div>
+            </li>
+        `).join('') + '</ul>';
+    }
+
+    function selectClient(client) {
+        selectedClient = client;
+        
+        document.getElementById('client-name').textContent = client.name;
+        document.getElementById('client-inn').textContent = client.inn;
+        document.getElementById('client-phone').textContent = client.phone;
+        document.getElementById('client-balance').textContent = client.balance + ' баллов';
+        document.getElementById('client-rating').textContent = client.rating;
+        document.getElementById('client-tier').textContent = client.tier;
+        document.getElementById('client-tier').className = 'badge badge-' + getTierColor(client.tier);
+        
+        document.getElementById('client-card').style.display = 'block';
+        document.getElementById('operations').style.display = 'block';
+        
+        document.getElementById('accrual-client-id').value = client.id;
+        document.getElementById('debit-client-id').value = client.id;
+        document.getElementById('rating-client-id').value = client.id;
+        
+        document.getElementById('debit-available').textContent = client.balance;
+        document.getElementById('rating-current').textContent = client.rating;
+        
+        document.getElementById('search-results').innerHTML = '';
+        document.getElementById('search-input').value = '';
+    }
+
+    function getTierColor(tier) {
+        const colors = {
+            'bronze': 'secondary',
+            'silver': 'info',
+            'gold': 'warning',
+            'platinum': 'primary'
+        };
+        return colors[tier] || 'secondary';
+    }
+
+    // Accrual form
+    document.getElementById('accrual-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const clientId = document.getElementById('accrual-client-id').value;
+        const amount = document.getElementById('accrual-amount').value;
+        const reason = document.getElementById('accrual-reason').value;
+        const comment = document.getElementById('accrual-comment').value;
+        const lifetime = document.getElementById('accrual-lifetime').value;
+        
+        if (!confirm(`Начислить ${amount} баллов клиенту ${selectedClient.name}?`)) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('client_id', clientId);
+        formData.append('amount', amount);
+        formData.append('reason', reason);
+        formData.append('comment', comment);
+        if (lifetime) formData.append('lifetime_days', lifetime);
+        
+        fetch('/api/manual/accrual/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                showNotification(`Успешно начислено ${amount} баллов. Новый баланс: ${data.new_balance}`, 'success');
+                document.getElementById('accrual-form').reset();
+                refreshHistory();
+                selectedClient.balance = data.new_balance;
+                document.getElementById('client-balance').textContent = data.new_balance + ' баллов';
+                document.getElementById('debit-available').textContent = data.new_balance;
+            } else {
+                showNotification('Ошибка: ' + data.error, 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Accrual failed:', err);
+            showNotification('Ошибка выполнения операции', 'error');
+        });
+    });
+
+    // Debit form
+    document.getElementById('debit-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const clientId = document.getElementById('debit-client-id').value;
+        const amount = document.getElementById('debit-amount').value;
+        const reason = document.getElementById('debit-reason').value;
+        const comment = document.getElementById('debit-comment').value;
+        
+        if (!confirm(`ВНИМАНИЕ! Списать ${amount} баллов у клиента ${selectedClient.name}?`)) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('client_id', clientId);
+        formData.append('amount', amount);
+        formData.append('reason', reason);
+        formData.append('comment', comment);
+        
+        fetch('/api/manual/debit/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                showNotification(`Успешно списано ${amount} баллов`, 'success');
+                document.getElementById('debit-form').reset();
+                refreshHistory();
+                selectedClient.balance -= parseInt(amount);
+                document.getElementById('client-balance').textContent = selectedClient.balance + ' баллов';
+                document.getElementById('debit-available').textContent = selectedClient.balance;
+            } else if (data.error === 'insufficient_balance') {
+                showNotification(`Недостаточно баллов. Доступно: ${data.available}, запрошено: ${data.requested}`, 'error');
+            } else {
+                showNotification('Ошибка: ' + data.error, 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Debit failed:', err);
+            showNotification('Ошибка выполнения операции', 'error');
+        });
+    });
+
+    // Rating form
+    document.getElementById('rating-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const clientId = document.getElementById('rating-client-id').value;
+        const ratingDelta = document.getElementById('rating-delta').value;
+        const reason = document.getElementById('rating-reason').value;
+        const comment = document.getElementById('rating-comment').value;
+        
+        const action = parseInt(ratingDelta) > 0 ? 'увеличить' : 'уменьшить';
+        if (!confirm(`${action} рейтинг клиента ${selectedClient.name} на ${ratingDelta}?`)) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('client_id', clientId);
+        formData.append('rating_delta', ratingDelta);
+        formData.append('reason', reason);
+        formData.append('comment', comment);
+        
+        fetch('/api/manual/adjust-rating/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                showNotification(`Рейтинг изменён: ${data.rating_before} → ${data.rating_after}. Tier: ${data.tier_after}`, 'success');
+                document.getElementById('rating-form').reset();
+                refreshHistory();
+                selectedClient.rating = data.rating_after;
+                selectedClient.tier = data.tier_after;
+                document.getElementById('client-rating').textContent = data.rating_after;
+                document.getElementById('client-tier').textContent = data.tier_after;
+                document.getElementById('client-tier').className = 'badge badge-' + getTierColor(data.tier_after);
+                document.getElementById('rating-current').textContent = data.rating_after;
+            } else {
+                showNotification('Ошибка: ' + data.error, 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Rating adjustment failed:', err);
+            showNotification('Ошибка выполнения операции', 'error');
+        });
+    });
+
+    // History
+    let currentFilter = 'all';
+
+    function filterHistory(eventType) {
+        currentFilter = eventType;
+        refreshHistory();
+    }
+
+    function refreshHistory() {
+        const url = currentFilter === 'all'
+            ? '/api/manual/history/'
+            : `/api/manual/history/?event_type=${currentFilter}`;
+        
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                displayHistory(data.history);
+            })
+            .catch(err => {
+                console.error('History fetch failed:', err);
+            });
+    }
+
+    function displayHistory(history) {
+        const tbody = document.getElementById('history-tbody');
+        
+        if (history.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #999;">Нет операций</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = history.map(item => {
+            const meta = item.meta || {};
+            const eventTypeLabel = getEventTypeLabel(item.event_type);
+            const eventTypeClass = getEventTypeClass(item.event_type);
+            
+            return `
+                <tr>
+                    <td style="white-space: nowrap;">${formatDateTime(item.created_at)}</td>
+                    <td>${item.first_name || ''} ${item.last_name || ''}<br><small>${item.inn || ''}</small></td>
+                    <td><span class="badge ${eventTypeClass}">${eventTypeLabel}</span></td>
+                    <td>${item.amount > 0 ? item.amount : '-'}</td>
+                    <td>${meta.reason || '-'}</td>
+                    <td>${meta.initiated_by_name || '-'}</td>
+                    <td><small>${meta.comment || '-'}</small></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function getEventTypeLabel(eventType) {
+        const labels = {
+            'manual_accrual': 'Начисление',
+            'manual_debit': 'Списание',
+            'manual_rating_adjustment': 'Рейтинг'
+        };
+        return labels[eventType] || eventType;
+    }
+
+    function getEventTypeClass(eventType) {
+        const classes = {
+            'manual_accrual': 'badge-success',
+            'manual_debit': 'badge-danger',
+            'manual_rating_adjustment': 'badge-warning'
+        };
+        return classes[eventType] || 'badge-secondary';
+    }
+
+    function formatDateTime(isoString) {
+        const date = new Date(isoString);
+        return date.toLocaleString('ru-RU');
+    }
+
+    // Load history on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        refreshHistory();
+    });
+    </script>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

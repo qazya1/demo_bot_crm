@@ -1,0 +1,505 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% if renewal_only %}Продление{% else %}Уведомления{% endif %} - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    {% include 'bot_app/_mobile_base_styles.html' %}
+    <style>
+        :root {
+            --c-bg: #f0f2f5;
+            --c-card: #ffffff;
+            --c-card-hover: #f8f9fb;
+            --c-border: #e4e8ef;
+            --c-text: #1a202c;
+            --c-muted: #718096;
+            --c-primary: #5a67d8;
+            --c-primary-light: #ebedfc;
+            --c-success: #38a169;
+            --c-success-light: #e6f4ec;
+            --c-warning: #d97706;
+            --c-warning-light: #fef3c7;
+            --c-danger: #c53030;
+            --c-danger-light: #fde8e8;
+            --c-orange: #c05621;
+            --c-orange-light: #feede2;
+            --c-gray: #a0aec0;
+            --c-gray-light: #edf2f7;
+            --shadow-sm: 0 1px 4px rgba(0,0,0,0.07);
+            --shadow-md: 0 2px 12px rgba(0,0,0,0.09);
+            --shadow-lg: 0 4px 20px rgba(0,0,0,0.12);
+            --r-sm: 8px;
+            --r-md: 12px;
+            --r-lg: 16px;
+        }
+
+        body { background: var(--c-bg); }
+        .container { max-width: 960px; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+
+        /* ── Статистика ─────────────────────────────── */
+        .stats-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .stat-box {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--c-card);
+            border-radius: var(--r-md);
+            box-shadow: var(--shadow-sm);
+            padding: 0.875rem 1.25rem;
+            min-width: 130px;
+        }
+        .stat-box .s-icon { font-size: 1.75rem; line-height: 1; }
+        .stat-box .s-val { font-size: 1.5rem; font-weight: 700; color: var(--c-text); line-height: 1; }
+        .stat-box .s-lbl { font-size: 0.78rem; color: var(--c-muted); margin-top: 2px; }
+        .stat-box.urgent { border-left: 4px solid var(--c-danger); }
+        .stat-box.unread  { border-left: 4px solid var(--c-warning); }
+
+        /* ── Кнопки ─────────────────────────────────── */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 0.4rem;
+            padding: 0.55rem 1.1rem;
+            min-height: 40px;
+            border: none; border-radius: var(--r-sm);
+            font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; text-decoration: none;
+            white-space: nowrap;
+        }
+        .btn-primary  { background: var(--c-primary); color: #fff; }
+        .btn-primary:hover  { background: #4c56c4; }
+        .btn-success  { background: var(--c-success); color: #fff; }
+        .btn-success:hover  { filter: brightness(0.92); }
+        .btn-gray     { background: var(--c-gray-light); color: #4a5568; }
+        .btn-gray:hover     { background: #e2e8f0; }
+        .btn-sm { padding: 0.4rem 0.85rem; font-size: 0.82rem; min-height: 34px; }
+
+        /* ── Фильтры ─────────────────────────────────── */
+        .filters {
+            background: var(--c-card);
+            border-radius: var(--r-md);
+            box-shadow: var(--shadow-sm);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-select {
+            padding: 0.5rem 0.9rem;
+            height: 40px;
+            border: 1.5px solid var(--c-border);
+            border-radius: var(--r-sm);
+            font-size: 0.9rem;
+            background: var(--c-card);
+            color: var(--c-text);
+            cursor: pointer;
+            -webkit-appearance: none; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23718096' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+        .filter-select:focus { outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(90,103,216,0.12); }
+        .filter-checkbox-label {
+            display: flex; align-items: center; gap: 0.4rem;
+            font-size: 0.9rem; color: var(--c-muted); cursor: pointer;
+        }
+        .filter-checkbox-label input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--c-primary); }
+
+        /* ── Заголовок секции ─────────────────────────── */
+        .section-heading {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--c-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 0 0 0.75rem;
+        }
+
+        /* ── Карточка уведомления ─────────────────────── */
+        .notification-item {
+            background: var(--c-card);
+            border-radius: var(--r-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 0.875rem;
+            border: 1.5px solid var(--c-border);
+            transition: box-shadow 0.2s, transform 0.2s;
+            overflow: hidden;
+        }
+        .notification-item:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+        .notification-item.unread {
+            border-left: 4px solid var(--c-primary);
+            border-color: var(--c-border);
+            border-left-color: var(--c-primary);
+        }
+        .notification-item.read {
+            border-left: 4px solid var(--c-border);
+        }
+        .notification-item.read .notif-title-text {
+            color: var(--c-muted);
+        }
+
+        /* Шапка карточки */
+        .notif-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 1rem 1.25rem 0.75rem;
+            gap: 0.75rem;
+        }
+        .notif-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex: 1;
+            min-width: 0;
+        }
+        .notif-icon {
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .notif-title-text {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--c-text);
+            line-height: 1.3;
+        }
+        .notif-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        .notif-time {
+            font-size: 0.8rem;
+            color: var(--c-muted);
+            white-space: nowrap;
+        }
+
+        /* Бейдж приоритета */
+        .prio-badge {
+            display: inline-block;
+            padding: 0.2rem 0.55rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .prio-urgent { background: var(--c-danger-light);  color: var(--c-danger); }
+        .prio-high   { background: var(--c-orange-light);  color: var(--c-orange); }
+        .prio-medium { background: #e0f0ff;                color: #1a56a4; }
+        .prio-low    { background: var(--c-gray-light);    color: #4a5568; }
+
+        /* Тело карточки */
+        .notif-body {
+            padding: 0 1.25rem 0.875rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .notif-message {
+            font-size: 0.9rem;
+            color: #4a5568;
+            line-height: 1.55;
+            white-space: pre-line;
+        }
+        .notif-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.875rem;
+            color: var(--c-muted);
+            background: var(--c-card-hover);
+            border-radius: var(--r-sm);
+            padding: 0.45rem 0.75rem;
+        }
+        .notif-meta-row a {
+            color: var(--c-primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .notif-meta-row a:hover { text-decoration: underline; }
+        .notif-meta-row strong { color: var(--c-text); }
+
+        /* Кнопки действий */
+        .notif-actions {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.65rem 1.25rem;
+            background: #f7f8fa;
+            border-top: 1px solid var(--c-border);
+            flex-wrap: wrap;
+        }
+
+        /* Статус прочтения */
+        .read-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.78rem;
+            color: var(--c-success);
+            font-weight: 600;
+        }
+
+        /* Пустое состояние */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--c-card);
+            border-radius: var(--r-lg);
+            box-shadow: var(--shadow-sm);
+            color: var(--c-muted);
+        }
+        .empty-state .e-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+        .empty-state h3 { font-size: 1.2rem; color: var(--c-text); margin-bottom: 0.5rem; }
+        .empty-state p { font-size: 0.9rem; }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem 0.75rem 2rem; }
+            .stats-row { gap: 0.6rem; }
+            .stat-box { min-width: 110px; padding: 0.65rem 0.9rem; }
+            .filters { flex-direction: column; }
+            .filter-select { width: 100%; }
+            .notif-header { flex-direction: column; gap: 0.5rem; }
+            .notif-right { width: 100%; justify-content: space-between; }
+            .notif-actions .btn { flex: 1; min-width: 100px; }
+        }
+    </style>
+</head>
+<body>
+    {% if renewal_only %}
+    {% include 'bot_app/_sidebar.html' with active_page='notifications_renewal' %}
+    {% else %}
+    {% include 'bot_app/_sidebar.html' with active_page='notifications' %}
+    {% endif %}
+
+    <div class="main-content">
+    <div class="page-header">
+        <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+        <h1>{% if renewal_only %}♻️ Продление{% else %}🔔 Уведомления{% endif %}</h1>
+        <div class="subtitle">{% if renewal_only %}Уведомления о продлении сроков{% else %}Центр уведомлений{% endif %}</div>
+    </div>
+
+    <div class="container">
+
+        <!-- Статистика -->
+        <div class="stats-row">
+            <div class="stat-box urgent">
+                <div class="s-icon">🚨</div>
+                <div>
+                    <div class="s-val">{{ urgent_count }}</div>
+                    <div class="s-lbl">Срочных</div>
+                </div>
+            </div>
+            <div class="stat-box unread">
+                <div class="s-icon">📬</div>
+                <div>
+                    <div class="s-val">{{ unread_count }}</div>
+                    <div class="s-lbl">Непрочитанных</div>
+                </div>
+            </div>
+            <div style="flex:1"></div>
+            <button class="btn btn-success" onclick="markAllRead()">✓ Прочитать все</button>
+        </div>
+
+        <!-- Фильтры -->
+        <form class="filters" method="GET">
+            <select name="type" class="filter-select" onchange="this.form.submit()">
+                <option value="">Все типы</option>
+                {% for t in notification_types %}
+                <option value="{{ t.code }}" {% if filter_type == t.code %}selected{% endif %}>{{ t.icon }} {{ t.name }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="priority" class="filter-select" onchange="this.form.submit()">
+                <option value="">Любой приоритет</option>
+                <option value="urgent"  {% if filter_priority == 'urgent'  %}selected{% endif %}>🔴 Срочный</option>
+                <option value="high"    {% if filter_priority == 'high'    %}selected{% endif %}>🟠 Высокий</option>
+                <option value="medium"  {% if filter_priority == 'medium'  %}selected{% endif %}>🔵 Средний</option>
+                <option value="low"     {% if filter_priority == 'low'     %}selected{% endif %}>⚪ Низкий</option>
+            </select>
+
+            <label class="filter-checkbox-label">
+                <input type="checkbox" name="unread" value="1"
+                    {% if filter_unread == '1' %}checked{% endif %}
+                    onchange="this.form.submit()">
+                Только непрочитанные
+            </label>
+
+            <a href="{% if renewal_only %}{% url 'bot_app:notifications_renewal' %}{% else %}{% url 'bot_app:notifications' %}{% endif %}"
+               class="btn btn-gray btn-sm">✕ Сбросить</a>
+        </form>
+
+        {% if not notifications and unread_count %}
+        <div style="background:var(--c-warning-light);border-left:4px solid var(--c-warning);border-radius:var(--r-sm);padding:0.9rem 1.1rem;margin-bottom:1rem;color:#92400e;font-size:0.9rem;">
+            ⚠️ Счётчик показывает {{ unread_count }} непрочитанных, но список пуст.
+            Возможно, уведомления находятся в другом разделе
+            (<a href="{% if renewal_only %}{% url 'bot_app:notifications' %}{% else %}{% url 'bot_app:notifications_renewal' %}{% endif %}" style="color:#92400e;font-weight:600;text-decoration:underline;">{% if renewal_only %}Уведомления{% else %}Продление{% endif %}</a>)
+            или отфильтрованы.
+        </div>
+        {% endif %}
+
+        <!-- Список -->
+        <p class="section-heading">
+            {% if renewal_only %}Продление{% else %}Уведомления{% endif %}
+            {% if notifications %}— {{ notifications|length }} шт.{% endif %}
+        </p>
+
+        <div class="notifications-list">
+        {% if notifications %}
+            {% for n in notifications %}
+            <div class="notification-item {% if n.read_at %}read{% else %}unread{% endif %}" data-id="{{ n.id }}">
+
+                <!-- Шапка -->
+                <div class="notif-header">
+                    <div class="notif-title">
+                        <span class="notif-icon">
+                            {% if n.type_icon %}{{ n.type_icon }}
+                            {% elif n.priority == 'urgent' %}🔴
+                            {% elif n.priority == 'high' %}🟠
+                            {% elif n.priority == 'medium' %}🔵
+                            {% else %}📋{% endif %}
+                        </span>
+                        <span class="notif-title-text">{{ n.title }}</span>
+                    </div>
+                    <div class="notif-right">
+                        <span class="prio-badge prio-{{ n.priority }}">
+                            {% if n.priority == 'urgent' %}Срочно
+                            {% elif n.priority == 'high' %}Высокий
+                            {% elif n.priority == 'medium' %}Средний
+                            {% else %}Низкий{% endif %}
+                        </span>
+                        <span class="notif-time">{{ n.created_at|ru_datetime }}</span>
+                    </div>
+                </div>
+
+                <!-- Тело -->
+                <div class="notif-body">
+                    {% if n.message %}
+                    <div class="notif-message">{{ n.message }}</div>
+                    {% endif %}
+
+                    {% if n.client_id %}
+                    <div class="notif-meta-row">
+                        👤 Клиент:&nbsp;
+                        <a href="{% url 'bot_app:crm_client_detail' n.client_id %}">
+                            {{ n.client_first_name }} {{ n.client_last_name }}
+                            {% if n.client_inn %}(ИНН: {{ n.client_inn }}){% endif %}
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    {% if n.deadline_date %}
+                    <div class="notif-meta-row">
+                        📅 Срок:&nbsp;<strong>{{ n.deadline_date|ru_date }}</strong>
+                        {% if n.deadline_type_name %}&nbsp;({{ n.deadline_type_name }}){% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if n.read_at %}
+                    <div class="read-badge">✓ Прочитано {{ n.read_at|ru_datetime }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Действия -->
+                <div class="notif-actions">
+                    {% if n.client_id %}
+                    <a href="{% url 'bot_app:crm_client_detail' n.client_id %}" class="btn btn-primary btn-sm">Открыть клиента</a>
+                    {% endif %}
+                    {% if n.chat_id %}
+                    <a href="{% url 'bot_app:specialist_chat' n.chat_id %}" class="btn btn-primary btn-sm">Открыть чат</a>
+                    {% endif %}
+                    <a
+                        href="{% url 'bot_app:crm_tasks' %}?open_create=1&prefill_title={{ n.title|urlencode }}&prefill_description={{ n.message|default_if_none:''|urlencode }}&prefill_source_type={% if renewal_only %}renewal{% elif n.type_code == 'order_new' %}order{% else %}manual{% endif %}&prefill_source_id={% if n.order_id %}{{ n.order_id }}{% elif n.kkt_id %}{{ n.kkt_id }}{% else %}{% endif %}&prefill_client_id={% if n.client_id %}{{ n.client_id }}{% endif %}"
+                        class="btn btn-primary btn-sm"
+                    >Создать задачу</a>
+                    {% if not n.read_at %}
+                    <button class="btn btn-gray btn-sm" onclick="markRead({{ n.id }})">✓ Прочитано</button>
+                    {% endif %}
+                    <button class="btn btn-gray btn-sm" onclick="dismiss({{ n.id }})">✕ Скрыть</button>
+                </div>
+
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="e-icon">{% if renewal_only %}♻️{% else %}🔔{% endif %}</div>
+                <h3>{% if renewal_only %}Нет уведомлений о продлении{% else %}Нет уведомлений{% endif %}</h3>
+                <p>{% if renewal_only %}Уведомления о сроках ОФД, ФН и Маркировки появятся здесь{% else %}Все уведомления прочитаны или скрыты{% endif %}</p>
+            </div>
+        {% endif %}
+        </div>
+
+    </div><!-- /container -->
+    </div><!-- /main-content -->
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+    <script>
+        const RENEWAL_ONLY = {{ renewal_only|yesno:"true,false" }};
+
+        function getCsrfToken() {
+            const m = document.cookie.match(/csrftoken=([^;]+)/);
+            return m ? m[1] : '';
+        }
+
+        function markRead(id) {
+            fetch(`/api/notification/${id}/read/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCsrfToken()}
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    const el = document.querySelector(`[data-id="${id}"]`);
+                    el.classList.remove('unread');
+                    el.classList.add('read');
+                    // убираем кнопку "Прочитано"
+                    const btns = el.querySelectorAll('.notif-actions .btn-gray');
+                    btns.forEach(b => { if (b.textContent.includes('Прочитано')) b.remove(); });
+                }
+            });
+        }
+
+        function dismiss(id) {
+            fetch(`/api/notification/${id}/dismiss/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCsrfToken()}
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    const el = document.querySelector(`[data-id="${id}"]`);
+                    el.style.transition = 'opacity 0.3s, transform 0.3s, max-height 0.4s';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateX(20px)';
+                    setTimeout(() => el.remove(), 350);
+                }
+            });
+        }
+
+        function markAllRead() {
+            const scope = RENEWAL_ONLY ? 'renewal' : 'general';
+            const body = new FormData();
+            body.append('scope', scope);
+            fetch('/api/notifications/read-all/', {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCsrfToken()},
+                body: body
+            }).then(r => r.json()).then(data => {
+                if (data.success) location.reload();
+            });
+        }
+    </script>
+</body>
+</html>

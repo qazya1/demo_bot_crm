@@ -1,0 +1,1432 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Сделки - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd6;
+            --color-success: #27ae60;
+            --color-warning: #f39c12;
+            --color-danger: #e74c3c;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .header {
+            background: var(--color-card-bg);
+            padding: var(--spacing-md) var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding-top: max(env(safe-area-inset-top), var(--spacing-md));
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 600; color: var(--color-text); }
+        .header-actions { display: flex; gap: 0.5rem; align-items: center; }
+        .content { padding: var(--spacing-lg) var(--spacing-xl); }
+        .table-container {
+            background: var(--color-card-bg);
+            border-radius: 20px;
+            border: 1px solid #e8eef6;
+            box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+            overflow: hidden;
+            position: relative;
+        }
+        /* Scroll indicator gradient */
+        .table-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 40px;
+            background: linear-gradient(to right, transparent, var(--color-card-bg));
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .table-container.scrolled::after {
+            opacity: 1;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 850px; }
+        table th {
+            background: #f8fafc;
+            padding: var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 1px solid #e8eef6;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        table td { padding: var(--spacing-md); border-bottom: 1px solid var(--color-border-light); vertical-align: middle; }
+        table tr:hover { background: #f8fbff; }
+        .badge { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-primary { background: #e3e8ff; color: #667eea; }
+        .badge-success { background: #d4edda; color: #27ae60; }
+        .badge-warning { background: #fff3cd; color: #f39c12; }
+        .badge-danger { background: #f8d7da; color: #c0392b; }
+        .badge-secondary { background: #e9ecef; color: #6c757d; }
+        .badge-manual { background: #e8daef; color: #8e44ad; }
+        .badge-advance { background: #d6eaf8; color: #2980b9; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-completed { background: #ede3ff; color: #5b2c91; }
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #95a5a6; }
+        .empty-state .icon { font-size: 4rem; margin-bottom: 1rem; }
+        .orders-overview { background:#ffffff; border-radius:28px; box-shadow:0 18px 50px rgba(15, 23, 42, 0.08); border:1px solid #e8eef6; padding:1.2rem 1.3rem; margin:var(--spacing-lg) var(--spacing-xl) var(--spacing-md); }
+        .orders-overview-top { display:flex; align-items:flex-start; justify-content:space-between; gap:0.75rem; margin-bottom:0.75rem; flex-wrap:wrap; }
+        .orders-overview-toggle { min-height:40px; border-radius:999px; padding:0.45rem 0.9rem; font-size:0.8rem; font-weight:700; color:#334155; border:1px solid #d9e2ef; background:#f8fbff; }
+        .orders-overview-toggle:hover { background:#eef4ff; border-color:#c9d7ee; }
+        .orders-overview-toggle .chevron { display:inline-block; width: 1em; text-align: center; }
+        .orders-overview-content { display:grid; grid-template-columns: 1fr minmax(280px, 320px); gap:1.2rem; overflow:hidden; max-height:1200px; opacity:1; transition:max-height 0.32s ease, opacity 0.22s ease, margin-top 0.22s ease; }
+        .orders-overview.is-collapsed .orders-overview-content { max-height:0; opacity:0; pointer-events:none; margin-top:-0.2rem; }
+        .orders-overview-summary {
+            display: none;
+            width: 100%;
+            flex-wrap: wrap;
+            gap: 6px 8px;
+            margin-top: 0.25rem;
+        }
+        .orders-overview.is-collapsed .orders-overview-top { margin-bottom: 0; }
+        .orders-overview.is-collapsed .orders-overview-summary { display: flex; }
+        .orders-summary-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.55rem;
+            border-radius: 999px;
+            font-size: 12px;
+            line-height: 1.3;
+            color: #334155;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .orders-summary-chip strong { font-weight: 700; }
+        .orders-overview-header h2 { margin:0; font-size:2rem; font-weight:900; color:#0f172a; }
+        .orders-overview-header p { margin:0.45rem 0 0; color:#64748b; }
+        .orders-stats-grid { display:grid; grid-template-columns: repeat(4,minmax(150px,1fr)); gap:0.85rem; margin-top:1rem; }
+        .orders-stat-card { position:relative; overflow:hidden; border-radius:20px; min-height:122px; padding:0.95rem 1rem; color:#fff; border:none; box-shadow:0 12px 28px rgba(30, 41, 59, 0.2); display:flex; flex-direction:column; justify-content:space-between; }
+        .orders-stat-card::after { content:''; position:absolute; width:92px; height:92px; border-radius:50%; top:-20px; right:-24px; background:rgba(255,255,255,0.18); }
+        .orders-stat-card:nth-child(1){ background:linear-gradient(135deg,#2563eb,#3b82f6); }
+        .orders-stat-card:nth-child(2){ background:linear-gradient(135deg,#059669,#22c55e); }
+        .orders-stat-card:nth-child(3){ background:linear-gradient(135deg,#4f46e5,#7c3aed); }
+        .orders-stat-card:nth-child(4){ background:linear-gradient(135deg,#0284c7,#0ea5e9); }
+        .orders-stat-card:nth-child(5){ background:linear-gradient(135deg,#475569,#64748b); }
+        .orders-stat-card:nth-child(6){ background:linear-gradient(135deg,#dc2626,#ef4444); }
+        .orders-stat-card:nth-child(7){ background:linear-gradient(135deg,#0f172a,#0f766e); }
+        .orders-stat-card:nth-child(8){ background:linear-gradient(135deg,#d97706,#f59e0b); }
+        .orders-stat-value { font-size:1.65rem; font-weight:800; line-height:1.2; z-index:1; }
+        .orders-stat-label { font-size:0.75rem; color:rgba(255,255,255,0.82); margin-top:0.2rem; text-transform:uppercase; letter-spacing:0.04em; z-index:1; }
+        .orders-period-box { border:1px solid #e2e8f0; border-radius:20px; padding:1.15rem; background:#f8fbff; }
+        .orders-period-box h3 { margin:0 0 0.65rem; font-size:1rem; }
+        .orders-period-row { margin-bottom:0.55rem; }
+        .orders-period-row label { display:block; font-size:0.75rem; color:var(--color-text-muted); margin-bottom:0.2rem; }
+        .orders-period-row input { width: 100%; min-height: 44px; border: 1px solid #d6e2f0; border-radius: 12px; padding: 0.5rem 0.65rem; background:#fff; }
+        #order-stats-refresh { width:100%; min-height:46px; margin-top:0.45rem; border-radius:12px; font-weight:700; }
+        .orders-period-display { margin-top:0.55rem; font-size:0.8rem; color:var(--color-text-muted); }
+        .filter-bar { display: flex; gap: var(--spacing-sm); align-items: center; margin-left: auto; flex-wrap: wrap; }
+        .filter-bar .btn { font-size: 0.8rem; }
+        .filters-card { background: #fff; border-radius: 20px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06); border:1px solid #e8eef6; padding: 1.05rem; margin-bottom: var(--spacing-md); }
+        .filters-grid { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 0.75rem; }
+        .filters-actions { display: flex; gap: 0.5rem; margin-top: 0.7rem; flex-wrap: wrap; }
+        .filter-field label { font-size: 0.75rem; color: var(--color-text-muted); display:block; margin-bottom: 0.2rem; }
+        .filter-field input, .filter-field select { width: 100%; padding: 0.45rem 0.6rem; border: 1px solid var(--color-border); border-radius: 8px; }
+        .filters-actions .btn { min-width: 140px; min-height: 44px; font-weight: 600; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid var(--color-border);
+            background: var(--color-card-bg);
+            color: #666;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .btn.active, .btn-primary { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+        .btn:hover { border-color: var(--color-primary); }
+        .btn:active { transform: scale(0.98); }
+        .btn-add-deal {
+            background: #8e44ad;
+            color: white;
+            border-color: #8e44ad;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.5rem 1.2rem;
+        }
+        .btn-add-deal:hover {
+            background: #7d3c98;
+            border-color: #7d3c98;
+        }
+        .burger-menu {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--color-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            line-height: 1;
+            min-width: var(--touch-target-min);
+            min-height: var(--touch-target-min);
+        }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; }
+        .sidebar-overlay.active { display: block; }
+
+        /* ====== Modal ====== */
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-md);
+            width: 90%;
+            max-width: 780px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border-bottom: 1px solid var(--color-border-light);
+        }
+        .modal-header h3 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--color-text-muted);
+            padding: 0.25rem;
+            line-height: 1;
+        }
+        .modal-close:hover { color: var(--color-danger); }
+        .modal-body { padding: var(--spacing-lg) var(--spacing-xl); }
+        .modal-footer {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-top: 1px solid var(--color-border-light);
+        }
+        .form-group { margin-bottom: var(--spacing-md); }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 0.3rem;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            background: var(--color-card-bg);
+            color: var(--color-text);
+            box-sizing: border-box;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+        .form-group textarea { resize: vertical; }
+
+        /* Client search autocomplete */
+        .client-search-wrap { position: relative; }
+        .client-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border);
+            border-top: none;
+            border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 210;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .client-search-results.show { display: block; }
+        .client-result-item {
+            padding: 0.6rem 0.8rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--color-border-light);
+            transition: background 0.15s;
+        }
+        .client-result-item:hover { background: var(--color-card-hover); }
+        .client-result-item:last-child { border-bottom: none; }
+        .client-result-name { font-weight: 600; color: var(--color-text); }
+        .client-result-meta { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 2px; }
+        .selected-client {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.8rem;
+            background: #e8daef;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            color: #6c3483;
+            font-weight: 500;
+        }
+        .selected-client .remove-client {
+            background: none;
+            border: none;
+            color: #6c3483;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0 0.3rem;
+            line-height: 1;
+            margin-left: auto;
+        }
+        .selected-client .remove-client:hover { color: var(--color-danger); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-weight: 500;
+            font-size: 0.9rem;
+            z-index: 300;
+            animation: toastIn 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+        .toast.success { background: var(--color-success); }
+        .toast.error { background: var(--color-danger); }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .burger-menu { display: flex; align-items: center; justify-content: center; }
+            .header { padding: var(--spacing-sm) var(--spacing-md); gap: var(--spacing-sm); }
+            .header h1 { font-size: 1.2rem; }
+            .orders-overview { margin:var(--spacing-sm); padding:var(--spacing-md); border-radius:20px; }
+            .orders-overview-top { align-items:center; }
+            .orders-overview-content { grid-template-columns:1fr; }
+            .orders-summary-chip { font-size: 12px; }
+            .orders-stats-grid { grid-template-columns: repeat(2,minmax(120px,1fr)); }
+            .filters-grid { grid-template-columns: 1fr; }
+            .content { padding: var(--spacing-sm); }
+            .table-container::after { display: none; }
+            .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { min-width: 800px; }
+
+            /* Card view for table on mobile */
+            .table-wrapper { overflow-x: visible; }
+            table { min-width: auto; }
+            .table-container table,
+            .table-container thead,
+            .table-container tbody,
+            .table-container th,
+            .table-container td,
+            .table-container tr {
+                display: block;
+            }
+            .table-container thead {
+                position: absolute;
+                left: -9999px;
+                top: -9999px;
+            }
+            .table-container tr {
+                background: var(--color-card-bg);
+                border: 1px solid var(--color-border);
+                border-radius: var(--radius-sm);
+                margin-bottom: var(--spacing-sm);
+                padding: var(--spacing-sm);
+            }
+            /* Скрываем менее важные колонки на мобильных */
+            .table-container td[data-label="Источник"],
+            .table-container td[data-label="Товары"],
+            .table-container td[data-label="Телефон"],
+            .table-container td[data-label="ИНН"],
+            .table-container td[data-label="Оплачен"],
+            .table-container td[data-label="Создан"] {
+                display: none;
+            }
+            .table-container td {
+                border: none;
+                padding: var(--spacing-xs) 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.9rem;
+            }
+            .table-container td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: var(--color-text-muted);
+                margin-right: var(--spacing-md);
+                text-transform: uppercase;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Action buttons */
+        .order-actions {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+        .order-actions .btn-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            border: 1px solid var(--color-border);
+            background: var(--color-card-bg);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.15s;
+            padding: 0;
+            min-height: auto;
+        }
+        @media (max-width: 1100px) {
+            .orders-overview-content { grid-template-columns: 1fr; }
+            .orders-stats-grid { grid-template-columns: repeat(2,minmax(160px,1fr)); }
+        }
+        @media (max-width: 560px) {
+            .orders-stats-grid { grid-template-columns: 1fr; }
+            .filters-actions .btn { width:100%; }
+        }
+        .order-actions .btn-action:hover {
+            border-color: var(--color-primary);
+            background: #f0f2ff;
+        }
+        .order-actions .btn-action.btn-delete:hover {
+            border-color: var(--color-danger);
+            background: #fef0f0;
+            color: var(--color-danger);
+        }
+        .confirm-dialog {
+            text-align: center;
+            padding: var(--spacing-lg);
+        }
+        .confirm-dialog p {
+            font-size: 1rem;
+            margin-bottom: var(--spacing-lg);
+            color: var(--color-text);
+        }
+        .confirm-dialog .btn-danger {
+            background: var(--color-danger);
+            color: white;
+            border-color: var(--color-danger);
+        }
+        .confirm-dialog .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn:hover {
+                transform: none;
+                box-shadow: none;
+            }
+            .btn:active {
+                transform: scale(0.98);
+            }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+        }
+
+        /* Shared overview compact dashboard: orders */
+        .orders-overview {
+            background:#fff; border:1px solid #e8eef6; border-radius:22px; box-shadow:0 10px 28px rgba(15,23,42,.06);
+            padding:16px 18px; margin:var(--spacing-lg) var(--spacing-xl) var(--spacing-md);
+        }
+        .orders-overview-content { display:grid; grid-template-columns:minmax(0,1fr) 270px; gap:14px; }
+        .orders-overview-header h2 { margin:0; font-size:24px; font-weight:800; }
+        .orders-overview-header p { margin:4px 0 0; font-size:14px; color:#667085; }
+        .orders-stats-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:10px; }
+        .orders-stat-card { min-height:98px; padding:14px 16px; border-radius:16px; box-shadow:0 8px 22px rgba(15,23,42,.10); }
+        .orders-stat-card::after { width:78px; height:78px; top:-18px; right:-22px; background:rgba(255,255,255,.16); }
+        .orders-stat-value { font-size:32px; line-height:1; }
+        .orders-stat-label { font-size:14px; margin-top:10px; text-transform:none; letter-spacing:0; }
+        .orders-stat-card:nth-child(1){ background:linear-gradient(135deg,#5a95de,#6eaee5); }
+        .orders-stat-card:nth-child(2){ background:linear-gradient(135deg,#4b9f7a,#62ae8a); }
+        .orders-stat-card:nth-child(3){ background:linear-gradient(135deg,#7f6dd6,#9584df); }
+        .orders-stat-card:nth-child(4){ background:linear-gradient(135deg,#59a6d4,#77b9de); }
+        .orders-stat-card:nth-child(5){ background:linear-gradient(135deg,#6b778a,#818ea0); }
+        .orders-stat-card:nth-child(6){ background:linear-gradient(135deg,#ca7872,#d98d88); }
+        .orders-stat-card:nth-child(7){ background:linear-gradient(135deg,#2c7d84,#3e9197); }
+        .orders-stat-card:nth-child(8){ background:linear-gradient(135deg,#cf995f,#dda876); }
+        .orders-period-box { width:270px; max-width:100%; padding:14px; border-radius:16px; border:1px solid #e8eef6; background:#f8fbff; }
+        .orders-period-box h3 { margin:0 0 .5rem; font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:#667085; }
+        .orders-period-row input { min-height:38px; height:38px; }
+        #order-stats-refresh { min-height:40px; height:40px; width:100%; }
+        @media (max-width: 1100px) {
+            .orders-overview-content { grid-template-columns:1fr; }
+            .orders-period-box { width:100%; }
+            .orders-stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        }
+        @media (min-width: 901px) {
+            .orders-overview-summary { flex-wrap: nowrap; overflow-x: auto; }
+        }
+        @media (max-width: 560px) {
+            .orders-stats-grid { grid-template-columns:1fr; }
+        }
+
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='crm_orders' %}
+
+    <div class="main-content">
+        <div class="header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <h1>{% if user.has_crm_access %}Сделки{% else %}Мои сделки{% endif %}</h1>
+            <div class="header-actions">
+                <button class="btn btn-add-deal" onclick="openDealModal()">+ Сделка</button>
+            </div>
+        </div>
+
+        <div class="orders-overview" id="orders-overview">
+            <div class="orders-overview-top">
+                <div class="orders-overview-header">
+                    <h2>Обзор сделок</h2>
+                    <p>Ключевые показатели за выбранный период</p>
+                </div>
+                <button id="orders-overview-toggle" class="orders-overview-toggle" type="button" aria-expanded="true" aria-controls="orders-overview-content">
+                    <span class="chevron">▾</span> Свернуть
+                </button>
+                <div class="orders-overview-summary" id="orders-overview-summary">
+                    <span class="orders-summary-chip">Всего: <strong id="order-summary-total">{{ total_orders }}</strong></span>
+                    <span class="orders-summary-chip">Оплачено: <strong id="order-summary-paid">{{ paid_orders }}</strong></span>
+                    <span class="orders-summary-chip">Выполнено: <strong id="order-summary-completed">{{ completed_orders }}</strong></span>
+                    <span class="orders-summary-chip">Аванс: <strong id="order-summary-advance">{{ advance_orders }}</strong></span>
+                    <span class="orders-summary-chip">Не оплачено: <strong id="order-summary-unpaid">{{ unpaid_orders }}</strong></span>
+                    <span class="orders-summary-chip">Отменено: <strong id="order-summary-cancelled">{{ cancelled_orders }}</strong></span>
+                    <span class="orders-summary-chip">Выручка: <strong id="order-summary-revenue">{{ revenue }} ₽</strong></span>
+                    <span class="orders-summary-chip">Авансы: <strong id="order-summary-advance-sum">{{ advance_sum }} ₽</strong></span>
+                </div>
+            </div>
+            <div class="orders-overview-content" id="orders-overview-content">
+                <div>
+                    <div class="orders-stats-grid">
+                    <div class="orders-stat-card"><div id="order-stat-total" class="orders-stat-value">{{ total_orders }}</div><div class="orders-stat-label">Всего сделок</div></div>
+                    <div class="orders-stat-card"><div id="order-stat-paid" class="orders-stat-value">{{ paid_orders }}</div><div class="orders-stat-label">Оплачено</div></div>
+                    <div class="orders-stat-card"><div id="order-stat-completed" class="orders-stat-value">{{ completed_orders }}</div><div class="orders-stat-label">Выполнено</div></div>
+                    <div class="orders-stat-card"><div id="order-stat-advance" class="orders-stat-value">{{ advance_orders }}</div><div class="orders-stat-label">Аванс</div></div>
+                    <div class="orders-stat-card"><div id="order-stat-unpaid" class="orders-stat-value">{{ unpaid_orders }}</div><div class="orders-stat-label">Не оплачено</div></div>
+                    <div class="orders-stat-card"><div id="order-stat-cancelled" class="orders-stat-value">{{ cancelled_orders }}</div><div class="orders-stat-label">Отменено</div></div>
+                    <div class="orders-stat-card"><div id="order-stat-revenue" class="orders-stat-value">{{ revenue }} ₽</div><div class="orders-stat-label">Выручка</div></div>
+                    <div class="orders-stat-card"><div id="order-stat-advance-sum" class="orders-stat-value">{{ advance_sum }} ₽</div><div class="orders-stat-label">Сумма авансов</div></div>
+                    </div>
+                </div>
+                <div class="orders-period-box">
+                <h3>Период</h3>
+                <div class="orders-period-row"><label for="order-stats-date-from">Дата с</label><input id="order-stats-date-from" type="date" value="{{ stats_date_from }}"></div>
+                <div class="orders-period-row"><label for="order-stats-date-to">Дата по</label><input id="order-stats-date-to" type="date" value="{{ stats_date_to }}"></div>
+                <button id="order-stats-refresh" class="btn btn-primary" type="button" onclick="refreshOrderStats()">Обновить</button>
+                <div id="order-stats-period-display" class="orders-period-display">{{ stats_date_from_display }} — {{ stats_date_to_display }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="filters-card">
+                <form method="get" action="{% url 'bot_app:crm_orders' %}">
+                    <div class="filters-grid">
+                        <div class="filter-field"><label>Поиск</label><input type="text" name="q" value="{{ q }}" placeholder="ID, клиент, ИНН, email..."></div>
+                        <div class="filter-field"><label>Дата c</label><input type="date" name="date_from" value="{{ date_from }}"></div>
+                        <div class="filter-field"><label>Дата по</label><input type="date" name="date_to" value="{{ date_to }}"></div>
+                        <div class="filter-field"><label>Оплата c</label><input type="date" name="paid_date_from" value="{{ paid_date_from }}"></div>
+                        <div class="filter-field"><label>Оплата по</label><input type="date" name="paid_date_to" value="{{ paid_date_to }}"></div>
+                        <div class="filter-field"><label>Сумма от</label><input type="number" step="0.01" name="amount_from" value="{{ amount_from }}"></div>
+                        <div class="filter-field"><label>Сумма до</label><input type="number" step="0.01" name="amount_to" value="{{ amount_to }}"></div>
+                        <div class="filter-field"><label>Источник</label><select name="source"><option value="">Все</option><option value="telegram" {% if source_filter == 'telegram' %}selected{% endif %} >Telegram</option><option value="max" {% if source_filter == 'max' %}selected{% endif %}>MAX</option><option value="manual" {% if source_filter == 'manual' %}selected{% endif %}>Ручные</option><option value="chat" {% if source_filter == 'chat' %}selected{% endif %}>Чат</option></select></div>
+                        <div class="filter-field"><label>Статус</label><select name="status"><option value="">Все</option><option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Оплачены</option><option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Выполненные</option><option value="advance" {% if status_filter == 'advance' %}selected{% endif %}>Аванс</option><option value="unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>Не оплачены</option><option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Отменённые</option></select></div>
+                        {% if can_edit_specialist %}
+                        <div class="filter-field"><label>Специалист</label><select name="specialist_id"><option value="">Все</option>{% for sp in specialists_for_edit %}<option value="{{ sp.id }}" {% if specialist_filter == sp.id|stringformat:'s' %}selected{% endif %}>{{ sp.name }}</option>{% endfor %}</select></div>
+                        {% endif %}
+                    </div>
+                    <div class="filters-actions">
+                        <button class="btn btn-primary" type="submit">Применить</button>
+                        <a class="btn" href="{% url 'bot_app:crm_orders' %}">Сбросить</a>
+                        <button class="btn" type="submit" formaction="{% url 'bot_app:export_orders_excel' %}">Экспорт Excel</button>
+                    </div>
+                </form>
+            </div>
+            <div class="table-container">
+                <div class="table-wrapper">
+                {% if orders %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Источник</th>
+                            <th>Сумма</th>
+                            <th>Статус</th>
+                            <th>Описание</th>
+                            <th>Клиент / Компания</th>
+                            <th>Специалист</th>
+                            <th>Создан</th>
+                            <th>Дата оплаты</th>
+                            <th style="width: 90px;">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for o in orders %}
+                        <tr>
+                            <td data-label="#"><a href="{% url 'bot_app:crm_order_detail' o.id %}" style="color: var(--color-primary); text-decoration: none; font-weight: 700;">#{{ o.id }}</a></td>
+                            <td data-label="Источник">
+                                {% if o.source == 'telegram' %}
+                                <span class="badge badge-primary">Телеграм</span>
+                                {% elif o.source == 'max' %}
+                                <span class="badge badge-warning">Max</span>
+                                {% elif o.source == 'manual' %}
+                                <span class="badge badge-manual">Ручная</span>
+                                {% elif o.source == 'chat' %}
+                                <span class="badge badge-info">Чат</span>
+                                {% elif o.source %}
+                                <span class="badge badge-secondary">{{ o.source }}</span>
+                                {% else %}
+                                <span class="badge badge-secondary">—</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Сумма"><strong>{{ o.amount }} ₽</strong></td>
+                            <td data-label="Статус">
+                                {% if o.status == 'CONFIRMED' %}
+                                <span class="badge badge-success">Оплачен</span>
+                                {% elif o.status == 'ADVANCE' %}
+                                <span class="badge badge-advance">Аванс</span>
+                                {% elif o.status == 'COMPLETED' %}
+                                <span class="badge badge-completed">Выполнена</span>
+                                {% elif o.status == 'CANCELLED' %}
+                                <span class="badge badge-danger">Отменён</span>
+                                {% elif o.status == 'INIT' %}
+                                <span class="badge badge-secondary">Не оплачен</span>
+                                {% elif o.status == 'REFUNDED' %}
+                                <span class="badge badge-danger">Возврат</span>
+                                {% else %}
+                                <span class="badge badge-secondary">{{ o.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Описание" style="white-space:pre-line;max-width:260px;">
+                                {{ o.item_names|default:"" }}
+                                {% if o.description %}
+                                {% if o.item_names %}<br>{% endif %}
+                                <span style="color: var(--color-text-muted); font-size: 0.85rem;">{{ o.description }}</span>
+                                {% endif %}
+                                {% if o.order_address %}
+                                <br><span style="font-size:0.8rem;color:var(--color-text-muted);">📍 {{ o.order_address }}</span>
+                                {% endif %}
+                                {% if not o.item_names and not o.description and not o.order_address %}—{% endif %}
+                            </td>
+                            <td data-label="Клиент / Компания">
+                                {% if o.company_id and o.company_name %}
+                                <a href="{% url 'bot_app:crm_company_detail' o.company_id %}" style="color: var(--color-primary); text-decoration: none; font-weight: 600;">&#x1F3E2; {{ o.company_name }}</a>
+                                {% endif %}
+                                {% if o.first_name or o.last_name %}
+                                {% if o.company_name %}<br>{% endif %}
+                                <span {% if o.user_id %}onclick="window.location='{% url 'bot_app:crm_client_detail' o.user_id %}'" style="cursor:pointer; color: var(--color-primary);"{% endif %}>{{ o.first_name|default:"" }} {{ o.last_name|default:"" }}</span>
+                                {% endif %}
+                                {% if not o.company_name and not o.first_name and not o.last_name %}-{% endif %}
+                                {% if o.inn %}<br><span style="font-size:0.8rem;color:var(--color-text-muted);">ИНН: {{ o.inn }}</span>{% endif %}
+                                {% if o.kpp %}<br><span style="font-size:0.8rem;color:var(--color-text-muted);">КПП: {{ o.kpp }}</span>{% endif %}
+                                {% if o.phone %}<br><span style="font-size:0.8rem;color:var(--color-text-muted);">{{ o.phone }}</span>{% endif %}
+                                {% if o.email %}<br><span style="font-size:0.8rem;color:var(--color-text-muted);">{{ o.email }}</span>{% endif %}
+                                {% if o.city %}<br><span style="font-size:0.8rem;color:var(--color-text-muted);">{{ o.city }}</span>{% endif %}
+                                {% if o.author_name %}
+                                <br><span style="font-size: 0.75rem; color: var(--color-text-muted);">от: {{ o.author_name }}</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Специалист">
+                                {% if o.specialist_name %}
+                                <span style="font-weight: 600;">{{ o.specialist_name }}</span><br>
+                                <span class="badge {% if o.specialist_profession == 0 %}badge-primary{% elif o.specialist_profession == 1 %}badge-warning{% elif o.specialist_profession == 3 %}badge-success{% elif o.specialist_profession == 4 %}badge-info{% else %}badge-secondary{% endif %}" style="font-size: 0.7rem;">
+                                    {% if o.specialist_profession == 0 %}Бухгалтер{% elif o.specialist_profession == 1 %}Тех. специалист{% elif o.specialist_profession == 2 %}Директор{% elif o.specialist_profession == 3 %}Консультант{% elif o.specialist_profession == 4 %}Разрешительная документация{% else %}Специалист{% endif %}
+                                </span>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td data-label="Создан">{{ o.created_at|ru_datetime }}</td>
+                            <td data-label="Дата оплаты">{% if o.paid_at %}{{ o.paid_at|ru_datetime }}{% else %}-{% endif %}</td>
+                            <td data-label="Действия">
+                                <div class="order-actions">
+                                <a href="{% url 'bot_app:crm_order_detail' o.id %}" class="btn-action" title="Карточка заказа" style="text-decoration:none;">&#128203;</a>
+                                    <button class="btn-action" title="Редактировать"
+                                            data-order-id="{{ o.id }}"
+                                            data-amount="{{ o.amount }}"
+                                            data-status="{{ o.status }}"
+                                            data-description="{{ o.description|default:''|escape }}"
+                                            data-comment="{{ o.internal_comment|default:''|escape }}"
+                                            data-paid-at="{% if o.paid_at %}{{ o.paid_at|date:'c' }}{% endif %}"
+                                            data-specialist-id="{{ o.specialist_id|default:'' }}"
+                                            data-buyer-name="{% if o.company_name %}{{ o.company_name|escape }}{% elif o.first_name or o.last_name %}{{ o.first_name|default:''|escape }} {{ o.last_name|default:''|escape }}{% else %}Не привязан{% endif %}"
+                                            data-buyer-url="{% if o.company_id %}{% url 'bot_app:crm_company_detail' o.company_id %}{% elif o.user_id %}{% url 'bot_app:crm_client_detail' o.user_id %}{% endif %}"
+                                            onclick="openEditModalFromButton(this)">&#9998;</button>
+                                    <button class="btn-action btn-delete" title="Удалить" onclick="confirmDelete({{ o.id }})">&#128465;</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="icon">📋</div>
+                    <h3>Сделок не найдено</h3>
+                    <p>Попробуйте изменить фильтры</p>
+                </div>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка создания ручной сделки -->
+    <div id="deal-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Новая сделка</h3>
+                <button class="modal-close" onclick="closeDealModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Клиент или Компания *</label>
+                    <div class="client-search-wrap">
+                        <div id="selected-client-box" style="display:none;"></div>
+                        <input type="text" id="deal-client-search" placeholder="Поиск по имени, телефону, ИНН, компании..." autocomplete="off">
+                        <input type="hidden" id="deal-client-id">
+                        <input type="hidden" id="deal-company-id">
+                        <div class="client-search-results" id="client-results"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Продукт / Услуга</label>
+                    <input type="text" id="deal-product" placeholder="Например: Настройка ККТ, Обслуживание...">
+                </div>
+                <div class="form-group">
+                    <label>Сумма, ₽</label>
+                    <input type="number" id="deal-amount" placeholder="0" min="0" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="deal-description" rows="3" placeholder="Подробности сделки..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Статус</label>
+                    <select id="deal-status">
+                        <option value="CONFIRMED" selected>Оплачен</option>
+                        <option value="ADVANCE">Аванс (предоплата)</option>
+                        <option value="INIT">Не оплачен</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeDealModal()">Отмена</button>
+                <button class="btn btn-add-deal" onclick="saveDeal()">Создать сделку</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка редактирования сделки -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Редактировать сделку <span id="edit-order-id-label"></span></h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-order-id">
+                <div class="form-group">
+                    <label>Сумма, &#8381;</label>
+                    <input type="number" id="edit-amount" placeholder="0" min="0" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Статус</label>
+                    <select id="edit-paid-status">
+                        <option value="paid">Оплачен</option>
+                        <option value="advance">Аванс (предоплата)</option>
+                        <option value="completed">Выполнена</option>
+                        <option value="unpaid">Не оплачен</option>
+                        <option value="cancelled">Отменён</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Описание / услуга</label>
+                    <textarea id="edit-description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Внутренняя заметка</label>
+                    <textarea id="edit-comment" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Дата оплаты</label>
+                    <input type="datetime-local" id="edit-paid-at">
+                </div>
+                {% if can_edit_specialist %}
+                <div class="form-group">
+                    <label>Специалист</label>
+                    <select id="edit-specialist-id">
+                        <option value="">Не назначен</option>
+                        {% for sp in specialists_for_edit %}
+                        <option value="{{ sp.id }}">{{ sp.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div class="form-group">
+                    <label>Покупатель</label>
+                    <div id="edit-buyer-box" style="padding:8px 10px;background:#f8f9fa;border:1px solid var(--color-border);border-radius:8px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeEditModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveOrderEdit()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка подтверждения удаления -->
+    <div id="delete-modal" class="modal">
+        <div class="modal-content" style="max-width: 380px;">
+            <div class="modal-body confirm-dialog">
+                <p>Удалить сделку <strong>#<span id="delete-order-id-label"></span></strong>?</p>
+                <input type="hidden" id="delete-order-id">
+                <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                    <button class="btn" onclick="closeDeleteModal()">Отмена</button>
+                    <button class="btn btn-danger" onclick="deleteOrder()" style="background: var(--color-danger); color: white; border-color: var(--color-danger);">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка создания клиента (при создании сделки) -->
+    <div id="create-client-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Новый клиент</h3>
+                <button class="modal-close" onclick="closeCreateClientModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Имя *</label>
+                    <input type="text" id="new-client-first-name" placeholder="Иван">
+                </div>
+                <div class="form-group">
+                    <label>Фамилия</label>
+                    <input type="text" id="new-client-last-name" placeholder="Иванов">
+                </div>
+                <div class="form-group">
+                    <label>Телефон</label>
+                    <input type="tel" id="new-client-phone" placeholder="+7 900 000 00 00">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="new-client-email" placeholder="example@company.ru">
+                </div>
+                <div class="form-group">
+                    <label>ИНН</label>
+                    <input type="text" id="new-client-inn" placeholder="1234567890">
+                </div>
+                <div class="form-group">
+                    <label>Компания</label>
+                    <input type="text" id="new-client-org" placeholder="ООО Ромашка">
+                    <span style="font-size: 0.78rem; color: #95a5a6;">Укажите имя или компанию (хотя бы одно)</span>
+                </div>
+                <div class="form-group">
+                    <label>Город</label>
+                    <input type="text" id="new-client-city" placeholder="Москва">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeCreateClientModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveNewClient()">Создать клиента</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ====== Scroll indicator ======
+    function clearEditOrderUrlState() {
+        var url = new URL(window.location.href);
+        var changed = false;
+        if (url.searchParams.has('edit_order')) {
+            url.searchParams.delete('edit_order');
+            changed = true;
+        }
+        if (url.hash && url.hash.indexOf('edit') !== -1) {
+            url.hash = '';
+            changed = true;
+        }
+        if (changed) {
+            window.history.replaceState({}, document.title, url.pathname + (url.search || ''));
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var tableContainer = document.querySelector('.table-container');
+        var tableWrapper = document.querySelector('.table-wrapper');
+        if (tableWrapper) {
+            tableWrapper.addEventListener('scroll', function() {
+                if (this.scrollLeft > 10) {
+                    tableContainer.classList.add('scrolled');
+                } else {
+                    tableContainer.classList.remove('scrolled');
+                }
+            });
+        }
+        var params = new URLSearchParams(window.location.search);
+        var editOrder = params.get('edit_order');
+        if (editOrder) {
+            var btn = document.querySelector('button[data-order-id="' + editOrder + '"]');
+            if (btn) {
+                openEditModalFromButton(btn);
+            } else {
+                clearEditOrderUrlState();
+            }
+        }
+        initOrdersOverviewToggle();
+    });
+
+
+
+
+    function initOrdersOverviewToggle() {
+        var overview = document.getElementById('orders-overview');
+        var toggleBtn = document.getElementById('orders-overview-toggle');
+        var storageKey = 'ordersOverviewCollapsed';
+        if (!overview || !toggleBtn) {
+            return;
+        }
+
+        function setCollapsed(collapsed) {
+            overview.classList.toggle('is-collapsed', collapsed);
+            toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+            toggleBtn.innerHTML = '<span class="chevron">' + (collapsed ? '▾' : '▴') + '</span> ' + (collapsed ? 'Развернуть' : 'Свернуть');
+        }
+
+        toggleBtn.addEventListener('click', function() {
+            var collapsed = !overview.classList.contains('is-collapsed');
+            setCollapsed(collapsed);
+            localStorage.setItem(storageKey, collapsed ? '1' : '0');
+        });
+
+        var saved = localStorage.getItem(storageKey);
+        var initialCollapsed = saved === null ? true : saved === '1';
+        setCollapsed(initialCollapsed);
+    }
+
+    function formatRubles(value) {
+        var num = Number(value || 0);
+        return new Intl.NumberFormat('ru-RU').format(num) + ' ₽';
+    }
+
+    function refreshOrderStats() {
+        var dateFrom = document.getElementById('order-stats-date-from').value;
+        var dateTo = document.getElementById('order-stats-date-to').value;
+        var refreshBtn = document.getElementById('order-stats-refresh');
+        var originalBtnText = refreshBtn.textContent;
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = 'Обновляем...';
+        var params = new URLSearchParams(window.location.search);
+        var source = params.get('source') || '';
+        var specialistId = params.get('specialist_id') || '';
+        var url = '{% url "bot_app:api_orders_stats" %}?stats_date_from=' + encodeURIComponent(dateFrom) + '&stats_date_to=' + encodeURIComponent(dateTo) + '&source=' + encodeURIComponent(source) + '&specialist_id=' + encodeURIComponent(specialistId);
+
+        fetch(url)
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if (!data.success) {
+                    showToast('Не удалось обновить статистику', 'error');
+                    return;
+                }
+                document.getElementById('order-stat-total').textContent = data.stats.total;
+                document.getElementById('order-stat-paid').textContent = data.stats.paid;
+                document.getElementById('order-stat-completed').textContent = data.stats.completed;
+                document.getElementById('order-stat-advance').textContent = data.stats.advance;
+                document.getElementById('order-stat-unpaid').textContent = data.stats.unpaid;
+                document.getElementById('order-stat-cancelled').textContent = data.stats.cancelled;
+                document.getElementById('order-stat-revenue').textContent = formatRubles(data.stats.revenue);
+                document.getElementById('order-stat-advance-sum').textContent = formatRubles(data.stats.advance_sum);
+                document.getElementById('order-summary-total').textContent = data.stats.total;
+                document.getElementById('order-summary-paid').textContent = data.stats.paid;
+                document.getElementById('order-summary-completed').textContent = data.stats.completed;
+                document.getElementById('order-summary-advance').textContent = data.stats.advance;
+                document.getElementById('order-summary-unpaid').textContent = data.stats.unpaid;
+                document.getElementById('order-summary-cancelled').textContent = data.stats.cancelled;
+                document.getElementById('order-summary-revenue').textContent = formatRubles(data.stats.revenue);
+                document.getElementById('order-summary-advance-sum').textContent = formatRubles(data.stats.advance_sum);
+                document.getElementById('order-stats-date-from').value = data.period.date_from;
+                document.getElementById('order-stats-date-to').value = data.period.date_to;
+                document.getElementById('order-stats-period-display').textContent = data.period.date_from_display + ' — ' + data.period.date_to_display;
+            })
+            .catch(function(){ showToast('Ошибка сети', 'error'); })
+            .finally(function(){
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = originalBtnText;
+            });
+    }
+
+    // ====== CSRF ======
+    function getCsrfToken() {
+        let cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+        return cookie ? cookie.split('=')[1] : '';
+    }
+
+    // ====== Toast ======
+    function showToast(msg, type) {
+        var t = document.createElement('div');
+        t.className = 'toast ' + (type || 'success');
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(function() { t.remove(); }, 3000);
+    }
+
+    // ====== Deal Modal ======
+    function openDealModal() {
+        document.getElementById('deal-modal').classList.add('active');
+        resetDealForm();
+        document.getElementById('deal-client-search').focus();
+    }
+
+    function closeDealModal() {
+        document.getElementById('deal-modal').classList.remove('active');
+        resetDealForm();
+    }
+
+    function resetDealForm() {
+        document.getElementById('deal-client-search').value = '';
+        document.getElementById('deal-client-id').value = '';
+        document.getElementById('deal-company-id').value = '';
+        document.getElementById('deal-product').value = '';
+        document.getElementById('deal-amount').value = '';
+        document.getElementById('deal-description').value = '';
+        document.getElementById('deal-status').value = 'CONFIRMED';
+        document.getElementById('client-results').classList.remove('show');
+        document.getElementById('selected-client-box').style.display = 'none';
+        document.getElementById('deal-client-search').style.display = '';
+    }
+
+    // ====== Client Search ======
+    var searchTimeout = null;
+
+    // Безопасная подстановка строки в data-атрибут (экранирование HTML-спецсимволов)
+    function escAttr(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    // Безопасная подстановка строки в innerHTML (экранирование HTML)
+    function escHtml(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var searchInput = document.getElementById('deal-client-search');
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            var q = this.value.trim();
+            if (q.length < 2) {
+                document.getElementById('client-results').classList.remove('show');
+                return;
+            }
+            searchTimeout = setTimeout(function() {
+                fetch('/crm/orders/search-clients/?q=' + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        var container = document.getElementById('client-results');
+                        var hasClients = data.success && data.clients && data.clients.length;
+                        var hasCompanies = data.success && data.companies && data.companies.length;
+                        if (!hasClients && !hasCompanies) {
+                            container.innerHTML = '<div class="client-result-item" style="color: var(--color-text-muted);">Не найдено</div>' +
+                                '<div class="client-result-item" style="color: var(--color-primary); font-weight: 600; cursor: pointer;">+ Создать нового клиента</div>';
+                            container.classList.add('show');
+                            return;
+                        }
+                        var html = '';
+                        // Компании
+                        if (hasCompanies) {
+                            html += '<div style="padding:0.4rem 0.8rem;font-size:0.7rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.5px;background:#f8f9fa;">Компании</div>';
+                            data.companies.forEach(function(c) {
+                                var meta = [];
+                                if (c.inn) meta.push('ИНН: ' + c.inn);
+                                if (c.phone) meta.push(c.phone);
+                                html += '<div class="client-result-item" data-type="company" data-id="' + c.id + '" data-name="' + escAttr(c.name || '') + '" data-inn="' + escAttr(c.inn || '') + '">' +
+                                    '<div class="client-result-name">&#x1F3E2; ' + escHtml(c.name || 'Без названия') + '</div>' +
+                                    (meta.length ? '<div class="client-result-meta">' + escHtml(meta.join(' · ')) + '</div>' : '') +
+                                    '</div>';
+                            });
+                        }
+                        // Контакты
+                        if (hasClients) {
+                            if (hasCompanies) {
+                                html += '<div style="padding:0.4rem 0.8rem;font-size:0.7rem;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.5px;background:#f8f9fa;">Контакты</div>';
+                            }
+                            data.clients.forEach(function(c) {
+                                var name = (c.first_name || '') + ' ' + (c.last_name || '');
+                                name = name.trim() || 'Без имени';
+                                var meta = [];
+                                if (c.phone) meta.push(c.phone);
+                                if (c.inn) meta.push('ИНН: ' + c.inn);
+                                if (c.org_name) meta.push(c.org_name);
+                                html += '<div class="client-result-item" data-type="client" data-id="' + c.id + '" data-name="' + escAttr(name) + '" data-phone="' + escAttr(c.phone || '') + '">' +
+                                    '<div class="client-result-name">' + escHtml(name) + '</div>' +
+                                    (meta.length ? '<div class="client-result-meta">' + escHtml(meta.join(' · ')) + '</div>' : '') +
+                                    '</div>';
+                            });
+                        }
+                        html += '<div class="client-result-item" data-type="create-new" style="color: var(--color-primary); font-weight: 600; cursor: pointer; border-top: 2px solid var(--color-border-light);">+ Создать нового клиента</div>';
+                        container.innerHTML = html;
+                        container.classList.add('show');
+                    });
+            }, 300);
+        });
+
+        // Делегированный обработчик кликов по результатам поиска (вместо inline onclick)
+        document.getElementById('client-results').addEventListener('click', function(e) {
+            var item = e.target.closest('.client-result-item');
+            if (!item) return;
+            var type = item.getAttribute('data-type');
+            if (type === 'company') {
+                selectCompany(parseInt(item.getAttribute('data-id')), item.getAttribute('data-name'), item.getAttribute('data-inn'));
+            } else if (type === 'client') {
+                selectClient(parseInt(item.getAttribute('data-id')), item.getAttribute('data-name'), item.getAttribute('data-phone'));
+            } else if (type === 'create-new') {
+                openCreateClientModal();
+            }
+        });
+
+        // Закрыть результаты при клике вне
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.client-search-wrap')) {
+                document.getElementById('client-results').classList.remove('show');
+            }
+        });
+
+        // Закрыть модалки по Esc
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeDealModal();
+                closeEditModal();
+                closeDeleteModal();
+                closeCreateClientModal();
+            }
+        });
+    });
+
+    function selectCompany(id, name, inn) {
+        document.getElementById('deal-company-id').value = id;
+        document.getElementById('deal-client-id').value = '';
+        document.getElementById('deal-client-search').style.display = 'none';
+        document.getElementById('client-results').classList.remove('show');
+        var box = document.getElementById('selected-client-box');
+        box.innerHTML = '<div class="selected-client">' +
+            '<span>&#x1F3E2; ' + name + (inn ? ' &middot; ИНН: ' + inn : '') + '</span>' +
+            '<button class="remove-client" onclick="clearClient()" title="Убрать">&times;</button>' +
+            '</div>';
+        box.style.display = 'block';
+    }
+
+    function selectClient(id, name, phone) {
+        document.getElementById('deal-client-id').value = id;
+        document.getElementById('deal-company-id').value = '';
+        document.getElementById('deal-client-search').style.display = 'none';
+        document.getElementById('client-results').classList.remove('show');
+        var box = document.getElementById('selected-client-box');
+        box.innerHTML = '<div class="selected-client">' +
+            '<span>' + name + (phone ? ' &middot; ' + phone : '') + '</span>' +
+            '<button class="remove-client" onclick="clearClient()" title="Убрать">&times;</button>' +
+            '</div>';
+        box.style.display = 'block';
+    }
+
+    function clearClient() {
+        document.getElementById('deal-client-id').value = '';
+        document.getElementById('deal-company-id').value = '';
+        document.getElementById('selected-client-box').style.display = 'none';
+        document.getElementById('deal-client-search').style.display = '';
+        document.getElementById('deal-client-search').value = '';
+        document.getElementById('deal-client-search').focus();
+    }
+
+    // ====== Edit Order ======
+    function openEditModalFromButton(btn) {
+        const data = btn.dataset;
+        openEditModal(data.orderId, data.amount, data.status, data.description || '', data.comment || '', data.paidAt || '', data.specialistId || '', data.buyerName || 'Не привязан', data.buyerUrl || '');
+    }
+
+    function openEditModal(orderId, amount, status, description, internalComment, paidAt, specialistId, buyerName, buyerUrl) {
+        document.getElementById('edit-order-id').value = orderId;
+        document.getElementById('edit-order-id-label').textContent = '#' + orderId;
+        document.getElementById('edit-amount').value = amount;
+        var statusMap = {'CONFIRMED': 'paid', 'ADVANCE': 'advance', 'COMPLETED': 'completed', 'INIT': 'unpaid', 'CANCELLED': 'cancelled'};
+        document.getElementById('edit-paid-status').value = statusMap[status] || 'unpaid';
+        document.getElementById('edit-description').value = description || '';
+        document.getElementById('edit-comment').value = internalComment || '';
+        document.getElementById('edit-paid-at').value = paidAt ? paidAt.slice(0, 16) : '';
+        var specialistField = document.getElementById('edit-specialist-id');
+        if (specialistField) specialistField.value = specialistId || '';
+        var buyerBox = document.getElementById('edit-buyer-box');
+        buyerBox.innerHTML = buyerUrl ? ('<a href="' + buyerUrl + '" style="color:var(--color-primary);text-decoration:none;">' + buyerName + '</a>') : buyerName;
+        document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-modal').classList.remove('active');
+        document.getElementById('edit-order-id').value = '';
+        clearEditOrderUrlState();
+    }
+
+    function saveOrderEdit() {
+        var orderId = document.getElementById('edit-order-id').value;
+        var amount = document.getElementById('edit-amount').value;
+        var paidStatus = document.getElementById('edit-paid-status').value;
+        var description = document.getElementById('edit-description').value.trim();
+        var internalComment = document.getElementById('edit-comment').value.trim();
+        var paidAt = document.getElementById('edit-paid-at').value;
+        var specialistField = document.getElementById('edit-specialist-id');
+        var specialistId = specialistField ? specialistField.value : null;
+
+        fetch('/crm/orders/' + orderId + '/update/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                amount: amount ? parseInt(amount) : 0,
+                new_status: paidStatus,
+                description: description,
+                internal_comment: internalComment,
+                paid_at: paidAt || null,
+                specialist_id: specialistId
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast('Сделка обновлена', 'success');
+                closeEditModal();
+                setTimeout(function() { window.location.reload(); }, 600);
+            } else {
+                showToast(data.error || 'Ошибка', 'error');
+            }
+        })
+        .catch(function() { showToast('Ошибка сети', 'error'); });
+    }
+
+    // ====== Delete Order ======
+    function confirmDelete(orderId) {
+        document.getElementById('delete-order-id').value = orderId;
+        document.getElementById('delete-order-id-label').textContent = orderId;
+        document.getElementById('delete-modal').classList.add('active');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').classList.remove('active');
+    }
+
+    function deleteOrder() {
+        var orderId = document.getElementById('delete-order-id').value;
+        fetch('/crm/orders/' + orderId + '/delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast('Сделка удалена', 'success');
+                closeDeleteModal();
+                setTimeout(function() { location.reload(); }, 600);
+            } else {
+                showToast(data.error || 'Ошибка', 'error');
+            }
+        })
+        .catch(function() { showToast('Ошибка сети', 'error'); });
+    }
+
+    // ====== Create Client Modal ======
+    function openCreateClientModal() {
+        document.getElementById('client-results').classList.remove('show');
+        document.getElementById('create-client-modal').classList.add('active');
+        document.getElementById('new-client-first-name').focus();
+    }
+
+    function closeCreateClientModal() {
+        document.getElementById('create-client-modal').classList.remove('active');
+        document.getElementById('new-client-first-name').value = '';
+        document.getElementById('new-client-last-name').value = '';
+        document.getElementById('new-client-phone').value = '';
+        document.getElementById('new-client-email').value = '';
+        document.getElementById('new-client-inn').value = '';
+        document.getElementById('new-client-org').value = '';
+        document.getElementById('new-client-city').value = '';
+    }
+
+    function saveNewClient() {
+        var firstName = document.getElementById('new-client-first-name').value.trim();
+        var lastName = document.getElementById('new-client-last-name').value.trim();
+        var phone = document.getElementById('new-client-phone').value.trim();
+        var email = document.getElementById('new-client-email').value.trim();
+        var inn = document.getElementById('new-client-inn').value.trim();
+        var orgName = document.getElementById('new-client-org').value.trim();
+        var city = document.getElementById('new-client-city').value.trim();
+
+        if (!firstName && !orgName) {
+            showToast('Укажите имя или организацию', 'error');
+            return;
+        }
+
+        fetch('{% url "bot_app:api_order_create_client" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                first_name: firstName,
+                last_name: lastName,
+                phone: phone,
+                email: email,
+                inn: inn,
+                org_name: orgName,
+                city: city
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var displayName = (firstName + ' ' + lastName).trim() || orgName;
+                selectClient(data.client_id, displayName, phone);
+                closeCreateClientModal();
+                showToast('Клиент создан', 'success');
+            } else {
+                showToast(data.error || 'Ошибка', 'error');
+            }
+        })
+        .catch(function() { showToast('Ошибка сети', 'error'); });
+    }
+
+    // ====== Save Deal ======
+    function saveDeal() {
+        var clientId = document.getElementById('deal-client-id').value;
+        var companyId = document.getElementById('deal-company-id').value;
+        var product = document.getElementById('deal-product').value.trim();
+        var amount = document.getElementById('deal-amount').value;
+        var description = document.getElementById('deal-description').value.trim();
+        var status = document.getElementById('deal-status').value;
+
+        if (!clientId && !companyId) {
+            showToast('Выберите клиента или компанию', 'error');
+            return;
+        }
+        if (!product && !description) {
+            showToast('Заполните продукт или описание', 'error');
+            return;
+        }
+
+        var body = {
+            product: product,
+            amount: amount || null,
+            description: description,
+            status: status
+        };
+        if (clientId) body.client_id = parseInt(clientId);
+        if (companyId) body.company_id = parseInt(companyId);
+
+        fetch('/crm/orders/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(body)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast('Сделка #' + data.order_id + ' создана!', 'success');
+                closeDealModal();
+                setTimeout(function() { location.reload(); }, 800);
+            } else {
+                showToast(data.error || 'Ошибка', 'error');
+            }
+        })
+        .catch(function() {
+            showToast('Ошибка сети', 'error');
+        });
+    }
+    </script>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

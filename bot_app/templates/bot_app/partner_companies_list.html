@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Компании партнёра</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        .partner-page { width: min(1460px,100%); margin:0 auto; padding:1.25rem clamp(1rem,2vw,2rem) 2rem; display:grid; gap:1rem; }
+        .page-hero,.workspace,.kpi { background:#fff; border:1px solid #e7ebf5; border-radius:16px; box-shadow:0 10px 25px rgba(15,23,42,.06); }
+        .page-hero { padding:1.2rem 1.4rem; display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+        .hero-title{font-size:1.8rem;font-weight:800}.hero-sub{color:#64748b;margin-top:.3rem}
+        .hero-chip{display:inline-flex;background:#eef3ff;border:1px solid #dde7ff;padding:.28rem .6rem;border-radius:999px;margin:.5rem .35rem 0 0;color:#284ea3;font-size:.84rem;font-weight:600}
+        .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.8rem}
+        .kpi{padding:1rem}.kpi .label{font-size:.8rem;color:#64748b}.kpi .value{font-size:1.6rem;font-weight:800;color:#162033}
+        .workspace{overflow:hidden}.workspace-head{padding:1rem;border-bottom:1px solid #edf1f7;display:flex;justify-content:space-between;gap:.7rem;align-items:center;flex-wrap:wrap}
+        .filter{display:flex;gap:.6rem;flex-wrap:wrap}.filter input{height:42px;border:1px solid #d8e0ee;border-radius:10px;padding:0 .75rem;min-width:300px}
+        .btn{display:inline-flex;align-items:center;text-decoration:none;border-radius:10px;padding:.62rem .9rem;font-weight:650}
+        .btn-primary{background:#4f46e5;color:#fff}.btn-secondary{background:#eef2ff;color:#334155}
+        table{width:100%;border-collapse:collapse;min-width:960px} th,td{padding:.86rem;border-bottom:1px solid #eef2f7;text-align:left} th{background:#f8faff;font-size:.76rem;text-transform:uppercase;color:#667085}
+        .company-link{color:#1f4fd5;font-weight:700;text-decoration:none}.muted{color:#94a3b8;font-size:.82rem}
+        .badge{padding:.22rem .55rem;border-radius:999px;background:#eef2ff;color:#4338ca;font-weight:700;font-size:.74rem}
+        .empty{padding:2.2rem;text-align:center;color:#64748b}
+        @media (max-width:1000px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media (max-width:760px){.partner-page{padding:1rem}.page-hero{flex-direction:column}.kpi-grid{grid-template-columns:1fr}.filter input{min-width:unset;width:100%}}
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='partner_companies' %}
+    <div class="main-content">
+        <div class="partner-page">
+            <section class="page-hero">
+                <div>
+                    <h1 class="hero-title">Компании партнёра</h1>
+                    <p class="hero-sub">Ведите собственную базу компаний и привязывайте только своих клиентов.</p>
+                    <span class="hero-chip">{{ stats.total_companies|default:0 }} компаний</span>
+                    <span class="hero-chip">{{ stats.with_inn|default:0 }} с ИНН</span>
+                    <span class="hero-chip">{{ stats.linked_clients|default:0 }} связанных клиентов</span>
+                </div>
+                <a href="{% url 'bot_app:partner_company_create' %}" class="btn btn-primary">+ Добавить компанию</a>
+            </section>
+
+            <section class="kpi-grid">
+                <article class="kpi"><div class="label">Всего компаний</div><div class="value">{{ stats.total_companies|default:0 }}</div></article>
+                <article class="kpi"><div class="label">Компаний с ИНН</div><div class="value">{{ stats.with_inn|default:0 }}</div></article>
+                <article class="kpi"><div class="label">Связанных клиентов</div><div class="value">{{ stats.linked_clients|default:0 }}</div></article>
+                <article class="kpi"><div class="label">Активные (с ККТ)</div><div class="value">{{ stats.active_with_kkt|default:0 }}</div></article>
+            </section>
+
+            <section class="workspace">
+                <div class="workspace-head">
+                    <strong>Список компаний</strong>
+                    <form method="get" class="filter">
+                        <input type="text" name="search" value="{{ search }}" placeholder="Поиск по названию, ИНН, адресу, телефону...">
+                        <button class="btn btn-secondary" type="submit">Найти</button>
+                    </form>
+                </div>
+                {% if companies %}
+                <div style="overflow:auto;">
+                    <table>
+                        <thead><tr><th>Название</th><th>ИНН</th><th>Город / адрес</th><th>Связанные клиенты</th><th>ККТ</th><th>Действия</th></tr></thead>
+                        <tbody>
+                        {% for c in companies %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'bot_app:partner_company_detail' c.id %}" class="company-link">{{ c.name }}</a>
+                                    <div class="muted">ID: {{ c.id }}</div>
+                                </td>
+                                <td>{{ c.inn|default:'-' }}</td>
+                                <td>{{ c.address|default:'-' }}</td>
+                                <td><span class="badge">{{ c.contacts_count|default:0 }}</span></td>
+                                <td><span class="badge">{{ c.kkt_count|default:0 }}</span></td>
+                                <td><a href="{% url 'bot_app:partner_company_detail' c.id %}" class="btn btn-secondary">Открыть</a></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <div class="empty">
+                        <h3 style="margin-bottom:.45rem;">Компаний пока нет</h3>
+                        <p>Добавьте первую компанию и привяжите к ней клиентов.</p>
+                        <a href="{% url 'bot_app:partner_company_create' %}" class="btn btn-primary" style="margin-top:.6rem;">Добавить компанию</a>
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

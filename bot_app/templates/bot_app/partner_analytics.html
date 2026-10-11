@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Аналитика партнёра</title>
+  {% include 'bot_app/_sidebar_styles.html' %}
+  {% include 'bot_app/_layout_styles.html' %}
+  <style>
+    .partner-page {
+      width: min(1460px, 100%);
+      margin: 0 auto;
+      padding: 1.25rem clamp(1rem, 2vw, 2rem) 2rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #ffffff 0%, #f6f9ff 100%);
+      border: 1px solid #e8edf8;
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+      padding: 1.3rem 1.45rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .hero h1 { font-size: clamp(1.4rem, 2vw, 1.95rem); margin-bottom: .32rem; }
+    .hero p { color: #5b677e; }
+
+    .kpi-main {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .82rem;
+    }
+
+    .kpi-mini {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .82rem;
+    }
+
+    .kpi-card {
+      background: #fff;
+      border: 1px solid #e7ebf5;
+      border-radius: 14px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, .06);
+      padding: .95rem 1rem;
+    }
+
+    .kpi-card .label { color: #64748b; font-size: .8rem; margin-bottom: .35rem; }
+    .kpi-card .value { font-size: 1.6rem; font-weight: 800; color: #162033; line-height: 1; }
+    .kpi-card .note { color: #94a3b8; font-size: .78rem; margin-top: .28rem; }
+    .kpi-card.accent { background: linear-gradient(145deg, #ffffff 0%, #f7fbff 100%); }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e7ebf5;
+      border-radius: 16px;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+      padding: 1rem;
+    }
+
+    .card-title { font-size: 1.1rem; font-weight: 760; color: #17233b; margin-bottom: .85rem; }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .85rem;
+    }
+
+    .ref {
+      border: 1px solid #e5eaf4;
+      border-radius: 14px;
+      padding: .9rem;
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+      display: grid;
+      gap: .55rem;
+    }
+
+    .ref-head { display: flex; align-items: center; justify-content: space-between; gap:.4rem; }
+    .ref-channel { font-weight: 760; font-size: .97rem; color: #17233b; }
+    .ref-status {
+      border-radius: 999px;
+      font-size: .74rem;
+      font-weight: 700;
+      padding: .25rem .58rem;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .ref-status.pending { background: #f1f5f9; color: #64748b; }
+    .ref-url {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: .55rem .7rem;
+      font-size: .87rem;
+      word-break: break-all;
+      color: #253047;
+      min-height: 40px;
+    }
+
+    .ref-actions { display: flex; justify-content: space-between; align-items:center; gap:.6rem; }
+    .ref-hint { color: #7b889c; font-size: .8rem; }
+    .qr-placeholder {
+      border: 1px dashed #cdd8eb;
+      border-radius: 10px;
+      min-height: 90px;
+      display: grid;
+      place-items: center;
+      color: #90a0b7;
+      background: #f8fbff;
+      font-size: .82rem;
+      text-align: center;
+      padding: .6rem;
+    }
+
+    .funnel {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .62rem;
+      align-items: stretch;
+    }
+
+    .step {
+      border-radius: 12px;
+      border: 1px solid #e5ebf5;
+      background: #f8fbff;
+      padding: .8rem;
+      position: relative;
+    }
+
+    .step:not(:last-child)::after {
+      content: '→';
+      position: absolute;
+      right: -0.62rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9aa8bf;
+      font-weight: 700;
+      background: #fff;
+      border-radius: 999px;
+      width: 1.3rem;
+      height: 1.3rem;
+      display: grid;
+      place-items: center;
+      border: 1px solid #e2e8f0;
+    }
+
+    .step .name { color: #667085; font-size: .8rem; }
+    .step .num { font-size: 1.35rem; font-weight: 800; margin-top: .24rem; color: #17233b; }
+
+    .table-wrap { overflow: auto; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 900px; }
+    th,td { padding: .84rem; border-bottom: 1px solid #eef2f7; text-align: left; }
+    th { font-size: .75rem; text-transform: uppercase; color: #667085; background: #f8faff; letter-spacing: .03em; }
+    tbody tr:hover { background: #f9fbff; }
+
+    .badge {
+      border-radius: 999px;
+      padding: .24rem .58rem;
+      font-size: .74rem;
+      font-weight: 650;
+      display: inline-block;
+    }
+
+    .b-ok { background: #dcfce7; color: #166534; }
+    .b-no { background: #f1f5f9; color: #64748b; }
+
+    .empty-state {
+      border: 1px dashed #d7e1ef;
+      border-radius: 12px;
+      padding: 1.45rem;
+      text-align: center;
+      background: #fbfdff;
+    }
+
+    .empty-icon { font-size: 1.45rem; margin-bottom: .35rem; }
+    .empty-title { font-weight: 740; color: #27334b; margin-bottom: .15rem; }
+    .empty-sub { color: #6b7890; font-size: .9rem; }
+
+    @media (max-width: 1200px) {
+      .kpi-main { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpi-mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .links-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 960px) {
+      .partner-page { padding: 1rem; }
+      .hero { flex-direction: column; }
+      .kpi-main, .kpi-mini { grid-template-columns: 1fr; }
+      .funnel { grid-template-columns: 1fr 1fr; }
+      .step:not(:last-child)::after { display: none; }
+    }
+
+    @media (max-width: 620px) {
+      .funnel { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+{% include 'bot_app/_sidebar.html' with active_page='partner_analytics' %}
+<div class="main-content">
+  <div class="partner-page">
+    <section class="hero">
+      <div>
+        <h1>Аналитика партнёра</h1>
+        <p>Отслеживайте переходы по ссылкам, активации в ботах и верификацию клиентов.</p>
+      </div>
+    </section>
+
+    <section class="kpi-main">
+      <article class="kpi-card accent"><div class="label">Всего клиентов</div><div class="value">{{ stats.total_clients|default:0 }}</div><div class="note">Клиентская база партнёра</div></article>
+      <article class="kpi-card accent"><div class="label">Активированы</div><div class="value">{{ bot_activated|default:0 }}</div><div class="note">Подключены к ботам</div></article>
+      <article class="kpi-card accent"><div class="label">Верифицированы</div><div class="value">{{ stats.verified_count|default:0 }}</div><div class="note">Подтверждённые клиенты</div></article>
+    </section>
+
+    <section class="kpi-mini">
+      <article class="kpi-card"><div class="label">Добавлены вручную</div><div class="value">{{ stats.manual_count|default:0 }}</div></article>
+      <article class="kpi-card"><div class="label">По реферальной ссылке</div><div class="value">{{ stats.referral_count|default:0 }}</div></article>
+    </section>
+
+    <section class="card">
+      <h3 class="card-title">Реферальные ссылки</h3>
+      <div class="links-grid">
+        <article class="ref">
+          <div class="ref-head">
+            <div class="ref-channel">Telegram</div>
+            <span class="ref-status {% if not tg_ref_url %}pending{% endif %}">{% if tg_ref_url %}Ссылка готова{% else %}Ещё не создана{% endif %}</span>
+          </div>
+          {% if tg_ref_url %}
+          <div class="ref-url" id="tgRef">{{ tg_ref_url }}</div>
+          <div class="ref-actions">
+            <button class="btn btn-primary btn-copy" data-target="tgRef">Скопировать</button>
+            <span class="ref-hint">Отправьте ссылку клиенту в мессенджере.</span>
+          </div>
+          {% else %}
+          <div class="ref-url">Ссылка ещё не создана.</div>
+          <div class="ref-hint">После генерации ссылка появится в этом блоке.</div>
+          {% endif %}
+          <div class="qr-placeholder">QR-код появится после создания ссылки.</div>
+        </article>
+
+        <article class="ref">
+          <div class="ref-head">
+            <div class="ref-channel">MAX</div>
+            <span class="ref-status {% if not max_ref_url %}pending{% endif %}">{% if max_ref_url %}Ссылка готова{% else %}Ещё не создана{% endif %}</span>
+          </div>
+          {% if max_ref_url %}
+          <div class="ref-url" id="maxRef">{{ max_ref_url }}</div>
+          <div class="ref-actions">
+            <button class="btn btn-primary btn-copy" data-target="maxRef">Скопировать</button>
+            <span class="ref-hint">Используйте для привлечения в MAX.</span>
+          </div>
+          {% else %}
+          <div class="ref-url">Ссылка ещё не создана.</div>
+          <div class="ref-hint">После генерации ссылка появится в этом блоке.</div>
+          {% endif %}
+          <div class="qr-placeholder">QR-код появится после создания ссылки.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 class="card-title">Воронка партнёра</h3>
+      <div class="funnel">
+        <div class="step"><div class="name">Пришли по ссылке</div><div class="num">{{ stats.referral_count|default:0 }}</div></div>
+        <div class="step"><div class="name">Активировались</div><div class="num">{{ bot_activated|default:0 }}</div></div>
+        <div class="step"><div class="name">Верифицированы</div><div class="num">{{ stats.verified_count|default:0 }}</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 class="card-title">Клиенты по реферальной ссылке</h3>
+      {% if referred_clients %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Клиент</th><th>Телефон / ИНН</th><th>Telegram</th><th>MAX</th><th>Верификация</th><th>Действия</th></tr></thead>
+          <tbody>
+          {% for c in referred_clients %}
+            <tr>
+              <td>{{ c.first_name|default:"" }} {{ c.last_name|default:"" }}</td>
+              <td>{{ c.phone|default:"-" }} / -</td>
+              <td>{% if c.tg_user_id %}<span class="badge b-ok">TG</span>{% else %}<span class="badge b-no">Нет</span>{% endif %}</td>
+              <td>{% if c.max_user_id %}<span class="badge b-ok">MAX</span>{% else %}<span class="badge b-no">Нет</span>{% endif %}</td>
+              <td>{% if c.is_verified %}<span class="badge b-ok">Верифицирован</span>{% else %}<span class="badge b-no">Не подтверждён</span>{% endif %}</td>
+              <td><a href="{% url 'bot_app:partner_client_detail' c.id %}" class="btn btn-secondary">Открыть</a></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">🔗</div>
+        <div class="empty-title">Пока нет клиентов по реферальной ссылке</div>
+        <div class="empty-sub">Скопируйте ссылку Telegram или MAX и отправьте клиенту.</div>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+<script>
+  document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.btn-copy');
+    if (!btn) return;
+    const el = document.getElementById(btn.dataset.target);
+    if (!el) return;
+    const text = el.textContent.trim();
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      const prev = btn.textContent;
+      btn.textContent = 'Скопировано';
+      setTimeout(() => btn.textContent = prev, 1200);
+    } catch (_) {}
+  });
+</script>
+{% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

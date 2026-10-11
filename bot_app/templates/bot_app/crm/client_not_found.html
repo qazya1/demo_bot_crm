@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Клиент не найден - CRM</title>
+    <style>
+        :root {
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --touch-target-min: 44px;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd8;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-bg: #f5f7fa;
+            --color-card: #ffffff;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-lg: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right)
+                     env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        .error-container {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            background: var(--color-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            max-width: 500px;
+            width: 90%;
+        }
+        .error-icon { font-size: 5rem; margin-bottom: var(--spacing-lg); }
+        .error-title { font-size: 1.75rem; color: var(--color-text); margin-bottom: var(--spacing-md); }
+        .error-message { color: var(--color-text-muted); margin-bottom: var(--spacing-xl); }
+        .btn {
+            display: inline-block;
+            padding: var(--spacing-md) var(--spacing-xl);
+            min-height: var(--touch-target-min);
+            background: var(--color-primary);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            transition: all 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn:hover { background: var(--color-primary-dark); transform: translateY(-2px); }
+        @media (max-width: 480px) {
+            .error-container { padding: var(--spacing-xl) var(--spacing-lg); }
+            .error-icon { font-size: 3.5rem; }
+            .error-title { font-size: 1.3rem; }
+            .error-message { font-size: 0.9rem; }
+            .btn { width: 100%; font-size: 16px; }
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card: #1a1a2e;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">&#128533;</div>
+        <h1 class="error-title">Клиент не найден</h1>
+        <p class="error-message">Запрашиваемый клиент не существует или был удалён.</p>
+        <a href="{% url 'bot_app:crm_clients' %}" class="btn">&larr; Назад к списку</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Финансы партнёров - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd8;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+        body {
+            background: var(--color-bg);
+            color: var(--color-text);
+        }
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(env(safe-area-inset-left), 0);
+                padding-right: max(env(safe-area-inset-right), 0);
+                padding-bottom: max(env(safe-area-inset-bottom), 0);
+            }
+        }
+        .container { max-width: none; padding: var(--content-padding-y) var(--content-padding-x); }
+        .section {
+            background: var(--color-card-bg);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-md);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: var(--spacing-xl);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .section h2 { font-size: 1.3rem; margin-bottom: 1rem; border-bottom: 2px solid #ecf0f1; padding-bottom: 0.5rem; }
+        .help-card {
+            margin-bottom: 1rem;
+            padding: 0.9rem 1rem;
+            border: 1px solid #dfe6ee;
+            border-radius: 10px;
+            background: #f8fbff;
+        }
+        .help-card h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+        }
+        .help-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 0.6rem 1rem;
+            margin: 0;
+            padding-left: 1rem;
+            color: var(--color-text);
+            font-size: 0.85rem;
+        }
+        .help-grid li { margin: 0; }
+        .help-muted { color: var(--color-text-muted); font-size: 0.82rem; margin-top: 0.5rem; }
+        .alert-success { background: #d4edda; border-left: 4px solid #27ae60; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; color: #155724; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 600px; }
+        th, td { padding: var(--spacing-sm) var(--spacing-md); text-align: left; border-bottom: 1px solid var(--color-border-light); }
+        th { background: var(--color-card-hover); font-weight: 600; color: var(--color-text); position: sticky; top: 0; }
+        .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+        .badge-draft { background: #fff3cd; color: #856404; }
+        .badge-approved { background: #cce5ff; color: #004085; }
+        .badge-paid { background: #d4edda; color: #155724; }
+        .btn {
+            padding: 0.4rem 0.8rem;
+            min-height: var(--touch-target-min);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; min-height: 36px; }
+        .period-selector { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
+        .period-selector input { padding: 0.4rem; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; background: rgba(255,255,255,0.15); color: white; font-size: 0.9rem; }
+        .period-selector .btn { background: rgba(255,255,255,0.2); color: white; }
+        .money { font-family: 'SF Mono', monospace; text-align: right; }
+        dialog { border: none; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        dialog::backdrop { background: rgba(0,0,0,0.4); }
+        dialog h3 { margin-bottom: 1rem; }
+        dialog .form-group { margin-bottom: 0.75rem; }
+        dialog label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+        dialog input, dialog textarea { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
+        dialog textarea { min-height: 60px; }
+        dialog .btn-row { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0; }
+            .container { padding: var(--content-padding-y) var(--content-padding-x); }
+            .section { padding: var(--spacing-md); }
+            table { min-width: 500px; }
+            .btn { min-height: var(--touch-target-min); display: inline-flex; align-items: center; justify-content: center; }
+            .btn-sm { min-height: 40px; }
+        }
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .section { background: var(--color-card-bg); }
+            th { background: var(--color-card-hover); color: var(--color-text); }
+        }
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn:hover { transform: none; }
+            .btn:active { transform: scale(0.98); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='partner_finance' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div><h1>Финансы партнёров</h1></div>
+            <form class="period-selector" method="get">
+                <input type="month" name="period" value="{{ period }}">
+                <button class="btn">Показать</button>
+            </form>
+        </div>
+
+        <div class="container">
+            {% if success %}<div class="alert-success">Сохранено!</div>{% endif %}
+
+            <div class="section">
+                <h2 style="display:flex;align-items:center;gap:1rem">
+                    Партнёры за {{ period }}
+                    <button class="btn btn-sm" style="background:#27ae60;color:white;margin-left:auto" onclick="approveAll()">Утвердить все черновики</button>
+                </h2>
+
+                <div class="help-card">
+                    <h3>Что означает таблица</h3>
+                    <ul class="help-grid">
+                        <li><strong>Партнёр</strong> — сотрудник, по которому считается зарплата.</li>
+                        <li><strong>Рейтинг</strong> — текущая оценка качества работы партнёра.</li>
+                        <li><strong>Базовая ставка</strong> — стартовая ставка партнёра без надбавки уровня.</li>
+                        <li><strong>Доп. ставка</strong> — надбавка от уровня (tier), добавляется к базовой.</li>
+                        <li><strong>Ставка выплаты</strong> — итоговый процент от выручки, используемый в расчёте.</li>
+                        <li><strong>Выручка за период</strong> — подтверждённые оплаты за выбранный месяц.</li>
+                        <li><strong>Базовая выплата</strong> — сумма по формуле: выручка × ставка.</li>
+                        <li><strong>Корректировки</strong> — ручные доплаты/удержания за период.</li>
+                        <li><strong>Итог к выплате</strong> — финальная сумма после корректировок.</li>
+                        <li><strong>Статус</strong> — этап выплаты: черновик / утверждено / выплачено.</li>
+                        <li><strong>Действия</strong> — быстрые кнопки для пересчёта и управления выплатой.</li>
+                    </ul>
+                    <div class="help-muted">
+                        Кнопки: <strong>Пересчитать</strong> — обновить расчёт; <strong>Изменить ставку</strong> — задать %;
+                        <strong>Вознаграждение</strong> — денежная доплата; <strong>Штраф</strong> — денежное удержание;
+                        <strong>Изменить рейтинг</strong> — ручная корректировка (+/-);
+                        <strong>Утвердить</strong> — зафиксировать сумму;
+                        <strong>Отметить выплаченной</strong> — закрыть выплату.
+                    </div>
+                </div>
+                <table>
+                    <thead><tr>
+                        <th>Партнёр</th><th>Рейтинг</th><th>Доп. ставка, %</th>
+                        <th>Базовая ставка, %</th><th>Ставка выплаты, %</th><th class="money">Выручка за период, ₽</th>
+                        <th class="money">Базовая выплата, ₽</th><th class="money">Корректировки, ₽</th>
+                        <th class="money">Итог к выплате, ₽</th><th>Статус</th><th>Действия</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for p in partners %}
+                    <tr>
+                        <td><strong>{{ p.name }}</strong></td>
+                        <td>{{ p.rating|default_if_none:"—" }}</td>
+                        <td>{{ p.tier_bonus_pct|default_if_none:"0"|floatformat:2 }}%</td>
+                        <td>{{ p.base_revenue_pct|default_if_none:"50" }}%</td>
+                        <td>{{ p.effective_pct|default_if_none:p.base_revenue_pct|default_if_none:"50" }}%</td>
+                        <td class="money">{{ p.gross_revenue_rub|default_if_none:"0"|floatformat:0 }}</td>
+                        <td class="money">{{ p.base_salary_rub|default_if_none:"0"|floatformat:0 }}</td>
+                        <td class="money">{{ p.adjustments_rub|default_if_none:"0"|floatformat:0 }}</td>
+                        <td class="money"><strong>{{ p.final_salary_rub|default_if_none:"0"|floatformat:0 }}</strong></td>
+                        <td>
+                            {% if p.period_status %}
+                            <span class="badge badge-{{ p.period_status }}">
+                                {% if p.period_status == 'draft' %}
+                                    Черновик
+                                {% elif p.period_status == 'approved' %}
+                                    Утверждено
+                                {% elif p.period_status == 'paid' %}
+                                    Выплачено
+                                {% else %}
+                                    {{ p.period_status }}
+                                {% endif %}
+                            </span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td style="white-space:nowrap">
+                            <button class="btn btn-sm btn-primary" onclick="recalc({{ p.id }})">Пересчитать</button>
+                            <button class="btn btn-sm btn-primary" onclick="openRate({{ p.id }},'{{ p.name }}')">Изменить ставку</button>
+                            <button class="btn btn-sm" style="background:#27ae60;color:white" onclick="openReward({{ p.id }},'{{ p.name }}')">Вознаграждение</button>
+                            <button class="btn btn-sm btn-danger" onclick="openComplaint({{ p.id }},'{{ p.name }}')">Штраф</button>
+                            <button class="btn btn-sm" style="background:#8e44ad;color:white" onclick="openRating({{ p.id }},'{{ p.name }}')">Изменить рейтинг</button>
+                            {% if p.period_status == 'draft' and p.period_id %}
+                            <button class="btn btn-sm" style="background:#27ae60;color:white" onclick="approvePeriod({{ p.period_id }})">Утвердить</button>
+                            {% elif p.period_status == 'approved' and p.period_id %}
+                            <button class="btn btn-sm" style="background:#2980b9;color:white" onclick="markPaid({{ p.period_id }})">Отметить выплаченной</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="11" style="text-align:center;color:#999">Нет партнёров</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Диалог: Ставка -->
+    <dialog id="rateDialog">
+        <h3>Изменить ставку: <span id="rateName"></span></h3>
+        <form id="rateForm">{% csrf_token %}
+            <input type="hidden" name="specialist_id" id="rateSpecId">
+            <div class="form-group"><label>Новая ставка (%)</label><input name="percent" type="number" step="0.1" required></div>
+            <div class="form-group"><label>Комментарий</label><input name="comment"></div>
+            <div class="btn-row">
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Отмена</button>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Диалог: Штраф -->
+    <dialog id="complaintDialog">
+        <h3>Денежный штраф: <span id="complaintName"></span></h3>
+        <form id="complaintForm">{% csrf_token %}
+            <input type="hidden" name="specialist_id" id="complaintSpecId">
+            <div class="form-group"><label>Сумма штрафа (₽)</label><input name="penalty_amount" type="number" min="1" step="0.01" value="1000" required></div>
+            <div class="form-group"><label>Причина</label><textarea name="comment" required></textarea></div>
+            <div class="btn-row">
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Отмена</button>
+                <button type="submit" class="btn btn-danger">Применить штраф</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Диалог: Вознаграждение -->
+    <dialog id="rewardDialog">
+        <h3>Вознаграждение: <span id="rewardName"></span></h3>
+        <form id="rewardForm">{% csrf_token %}
+            <input type="hidden" name="specialist_id" id="rewardSpecId">
+            <div class="form-group"><label>Сумма вознаграждения (₽)</label><input name="reward_amount" type="number" min="1" step="0.01" value="1000" required></div>
+            <div class="form-group"><label>Комментарий</label><textarea name="comment" required></textarea></div>
+            <div class="btn-row">
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Отмена</button>
+                <button type="submit" class="btn" style="background:#27ae60;color:white">Начислить</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Диалог: Изменение рейтинга -->
+    <dialog id="ratingDialog">
+        <h3>Изменить рейтинг: <span id="ratingName"></span></h3>
+        <form id="ratingForm">{% csrf_token %}
+            <input type="hidden" name="specialist_id" id="ratingSpecId">
+            <div class="form-group"><label>Изменение рейтинга (можно + и -)</label><input name="rating_delta" type="number" step="1" required placeholder="Например: +5 или -10"></div>
+            <div class="form-group"><label>Комментарий</label><textarea name="comment" required></textarea></div>
+            <div class="btn-row">
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Отмена</button>
+                <button type="submit" class="btn" style="background:#8e44ad;color:white">Применить</button>
+            </div>
+        </form>
+    </dialog>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+    <script>
+    function openRate(id,name){
+        document.getElementById('rateName').textContent=name;
+        document.getElementById('rateSpecId').value=id;
+        document.getElementById('rateDialog').showModal();
+    }
+    function openComplaint(id,name){
+        document.getElementById('complaintName').textContent=name;
+        document.getElementById('complaintSpecId').value=id;
+        document.getElementById('complaintDialog').showModal();
+    }
+    function openReward(id,name){
+        document.getElementById('rewardName').textContent=name;
+        document.getElementById('rewardSpecId').value=id;
+        document.getElementById('rewardDialog').showModal();
+    }
+    function openRating(id,name){
+        document.getElementById('ratingName').textContent=name;
+        document.getElementById('ratingSpecId').value=id;
+        document.getElementById('ratingDialog').showModal();
+    }
+
+    document.getElementById('rateForm').onsubmit=async function(e){
+        e.preventDefault();
+        const fd=new FormData(this);
+        await fetch('/api/partner/set-rate/',{method:'POST',body:fd});
+        location.reload();
+    };
+    document.getElementById('complaintForm').onsubmit=async function(e){
+        e.preventDefault();
+        const fd=new FormData(this);
+        fd.append('period','{{ period }}');
+        await fetch('/api/partner/complaint/',{method:'POST',body:fd});
+        location.reload();
+    };
+    document.getElementById('rewardForm').onsubmit=async function(e){
+        e.preventDefault();
+        const fd=new FormData(this);
+        fd.append('period','{{ period }}');
+        await fetch('/api/partner/reward/',{method:'POST',body:fd});
+        location.reload();
+    };
+    document.getElementById('ratingForm').onsubmit=async function(e){
+        e.preventDefault();
+        const fd=new FormData(this);
+        await fetch('/api/partner/adjust-rating/',{method:'POST',body:fd});
+        location.reload();
+    };
+
+    async function approvePeriod(periodId){
+        if(!confirm('Утвердить зарплату?')) return;
+        const fd=new FormData();
+        fd.append('period_id',periodId);
+        fd.append('csrfmiddlewaretoken','{{ csrf_token }}');
+        await fetch('/api/salary/approve/',{method:'POST',body:fd});
+        location.reload();
+    }
+    async function markPaid(periodId){
+        if(!confirm('Отметить как выплачено?')) return;
+        const fd=new FormData();
+        fd.append('period_id',periodId);
+        fd.append('csrfmiddlewaretoken','{{ csrf_token }}');
+        await fetch('/api/salary/mark-paid/',{method:'POST',body:fd});
+        location.reload();
+    }
+    async function approveAll(){
+        if(!confirm('Утвердить все зарплаты в статусе «Черновик» за {{ period }}?')) return;
+        const fd=new FormData();
+        fd.append('period','{{ period }}');
+        fd.append('csrfmiddlewaretoken','{{ csrf_token }}');
+        const r=await fetch('/api/salary/approve-all/',{method:'POST',body:fd});
+        const d=await r.json();
+        alert('Утверждено: '+(d.approved_count||0));
+        location.reload();
+    }
+
+    async function recalc(specId){
+        const fd=new FormData();
+        fd.append('specialist_id',specId);
+        fd.append('period','{{ period }}');
+        fd.append('csrfmiddlewaretoken','{{ csrf_token }}');
+        await fetch('/api/salary/recalculate/',{method:'POST',body:fd});
+        location.reload();
+    }
+    </script>
+</body>
+</html>

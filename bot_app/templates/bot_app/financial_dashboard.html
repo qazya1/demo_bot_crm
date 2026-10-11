@@ -1,0 +1,502 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Система лояльности - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    {% include 'bot_app/_mobile_base_styles.html' %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd6;
+            --color-success: #2ecc71;
+            --color-warning: #f39c12;
+            --color-danger: #e74c3c;
+            --color-info: #3498db;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-lg: 0 6px 20px rgba(0,0,0,0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .content-area { width: min(var(--content-max-width), 100%); margin: 0 auto; padding: var(--content-padding-y) var(--content-padding-x); }
+
+        /* KPI Cards */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+        .stat-card {
+            background: var(--color-card-bg);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+            position: relative;
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+        .stat-card.primary { border-left-color: var(--color-primary); }
+        .stat-card.success { border-left-color: var(--color-success); }
+        .stat-card.warning { border-left-color: var(--color-warning); }
+        .stat-card.danger { border-left-color: var(--color-danger); }
+        .stat-card.info { border-left-color: var(--color-info); }
+        .stat-card h3 { font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--spacing-sm); font-weight: 600; }
+        .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--color-text); margin-bottom: var(--spacing-xs); }
+        .stat-card .label { font-size: 0.85rem; color: var(--color-text-muted); }
+
+        /* Period selector */
+        .period-bar { display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); flex-wrap: wrap; }
+        .period-bar input[type="month"] {
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border: 2px solid var(--color-border-light);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            color: var(--color-text);
+            background: var(--color-card-bg);
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .period-bar input[type="month"]:focus { border-color: var(--color-primary); outline: none; }
+        .period-bar .btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            min-height: var(--touch-target-min);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-primary:hover { background: var(--color-primary-dark); }
+        .btn-primary:active { transform: scale(0.98); }
+
+        /* Charts layout */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: 2rem; }
+        .chart-card {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            padding: var(--spacing-lg);
+        }
+        .chart-card h3 { font-size: 1.1rem; color: var(--color-text); margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm); border-bottom: 2px solid var(--color-border-light); }
+        .chart-container { position: relative; width: 100%; height: 280px; }
+
+        /* Alerts */
+        .alerts-section { margin-bottom: 2rem; }
+        .alert {
+            padding: var(--spacing-md) var(--spacing-lg);
+            min-height: var(--touch-target-min);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--spacing-sm);
+            border-left: 4px solid;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            font-size: 0.95rem;
+        }
+        .alert-warning { background: #fff3cd; border-left-color: var(--color-warning); color: #856404; }
+        .alert-info { background: #d1ecf1; border-left-color: var(--color-info); color: #0c5460; }
+        .alert-danger { background: #f8d7da; border-left-color: var(--color-danger); color: #721c24; }
+
+        /* Tables */
+        .section {
+            background: var(--color-card-bg);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+        .section h2 { font-size: 1.3rem; border-bottom: 2px solid var(--color-border-light); padding-bottom: var(--spacing-sm); margin-bottom: var(--spacing-md); color: var(--color-text); }
+        table { width: 100%; border-collapse: collapse; }
+        table th {
+            background: var(--color-card-hover);
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-text);
+            border-bottom: 2px solid var(--color-border-light);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        table td { padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-border-light); font-size: 0.95rem; }
+        table tr:hover { background: var(--color-card-hover); }
+
+        /* Badges */
+        .badge { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-bronze { background: #f0e0c8; color: #8B6914; }
+        .badge-silver { background: #e8e8e8; color: #555; }
+        .badge-gold { background: #fff3cd; color: #856404; }
+        .badge-platinum { background: #e3e8ff; color: #667eea; }
+        .badge-none { background: #f0f0f0; color: #999; }
+        .badge-standard { background: #f0f0f0; color: #666; }
+        .badge-advanced { background: #d4edda; color: #27ae60; }
+        .badge-expert { background: #e3e8ff; color: #667eea; }
+        .badge-top { background: #fff3cd; color: #856404; }
+        .badge-credit { background: #d4edda; color: #27ae60; }
+        .badge-debit { background: #f8d7da; color: #c0392b; }
+
+        .text-credit { color: #27ae60; font-weight: 600; }
+        .text-debit { color: #e74c3c; font-weight: 600; }
+        .text-muted { color: #95a5a6; font-size: 0.85rem; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .page-header { flex-wrap: wrap; }
+            .page-header h1 { font-size: 1.3rem; }
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .content-area { padding: var(--content-padding-y) var(--content-padding-x); }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .content-area { padding: var(--content-padding-y) var(--content-padding-x); }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .period-bar input[type="month"] {
+                background: var(--color-card-hover);
+                color: var(--color-text);
+                border-color: var(--color-border);
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .stat-card:hover {
+                transform: none;
+                box-shadow: var(--shadow-md);
+            }
+            .btn-primary:active {
+                transform: scale(0.98);
+            }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='financial_dashboard' %}
+
+    <div class="main-content">
+        <!-- Header -->
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div>
+                <h1>📈 Система лояльности</h1>
+                <div class="subtitle">Программа лояльности и компенсации партнёров</div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <!-- Period Selector -->
+            <div class="period-bar">
+                <label style="font-weight: 600; color: #7f8c8d; font-size: 0.9rem;">Период:</label>
+                <input type="month" id="periodInput" value="{{ period }}">
+                <button class="btn btn-primary" onclick="changePeriod()">Применить</button>
+            </div>
+
+            <!-- Alerts -->
+            {% if alerts %}
+            <div class="alerts-section">
+                {% for alert in alerts %}
+                <div class="alert alert-{{ alert.type }}">
+                    {% if alert.type == 'warning' %}⚠️{% elif alert.type == 'danger' %}🚨{% else %}ℹ️{% endif %}
+                    {{ alert.text }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- KPI Cards -->
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <h3>Клиентов с баллами</h3>
+                    <div class="value">{{ active_clients }}</div>
+                    <div class="label">из {{ total_users }} всего</div>
+                </div>
+                <div class="stat-card success">
+                    <h3>Общий баланс</h3>
+                    <div class="value">{{ total_balance|floatformat:0 }}</div>
+                    <div class="label">баллов в системе</div>
+                </div>
+                <div class="stat-card info">
+                    <h3>Средний баланс</h3>
+                    <div class="value">{{ avg_balance|floatformat:1 }}</div>
+                    <div class="label">баллов на клиента</div>
+                </div>
+                <div class="stat-card success">
+                    <h3>Начислено за месяц</h3>
+                    <div class="value text-credit">+{{ accrued_month|floatformat:0 }}</div>
+                    <div class="label">баллов</div>
+                </div>
+                <div class="stat-card danger">
+                    <h3>Списано за месяц</h3>
+                    <div class="value text-debit">-{{ spent_month|floatformat:0 }}</div>
+                    <div class="label">баллов</div>
+                </div>
+                <div class="stat-card warning">
+                    <h3>Фонд зарплаты</h3>
+                    <div class="value">{{ salary_fund|floatformat:0 }} ₽</div>
+                    <div class="label">за {{ period }}</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Динамика баллов (30 дней)</h3>
+                    <div class="chart-container">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Распределение клиентов по уровню</h3>
+                    <div class="chart-container">
+                        <canvas id="tierChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Clients & Partners -->
+            <div class="charts-grid">
+                <div class="section">
+                    <h2>Топ-10 клиентов по балансу</h2>
+                    {% if top_clients %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Клиент</th>
+                                <th>Баланс</th>
+                                <th>Уровень</th>
+                                <th>Рейтинг</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in top_clients %}
+                            <tr>
+                                <td>
+                                    <a href="/crm/client/{{ c.id }}/" style="color: #667eea; text-decoration: none; font-weight: 500;">
+                                        {{ c.first_name }} {{ c.last_name }}
+                                    </a>
+                                    {% if c.phone %}<div class="text-muted">{{ c.phone }}</div>{% endif %}
+                                </td>
+                                <td><strong>{{ c.available_amount|floatformat:0 }}</strong></td>
+                                <td><span class="badge badge-{{ c.tier }}">{{ c.tier }}</span></td>
+                                <td>{{ c.rating }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="text-muted" style="padding: 2rem; text-align: center;">Нет данных о балансах клиентов</p>
+                    {% endif %}
+                </div>
+
+                <div class="section">
+                    <h2>Топ-5 партнёров по выручке</h2>
+                    {% if top_partners %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Партнёр</th>
+                                <th>Выручка</th>
+                                <th>Зарплата</th>
+                                <th>Уровень</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in top_partners %}
+                            <tr>
+                                <td><strong>{{ p.name }}</strong></td>
+                                <td>{{ p.revenue|floatformat:0 }} ₽</td>
+                                <td>{{ p.salary|floatformat:0 }} ₽</td>
+                                <td><span class="badge badge-{{ p.tier }}">{{ p.tier }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p class="text-muted" style="padding: 2rem; text-align: center;">Нет данных о партнёрах за этот период</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="section">
+                <h2>Последние операции</h2>
+                {% if recent_transactions %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Тип</th>
+                            <th>Событие</th>
+                            <th>Сумма</th>
+                            <th>Описание</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in recent_transactions %}
+                        <tr>
+                            <td class="text-muted">{{ tx.created_at|ru_datetime }}</td>
+                            <td>
+                                <span class="badge badge-{{ tx.direction }}">
+                                    {% if tx.direction == 'credit' %}начисление{% else %}списание{% endif %}
+                                </span>
+                            </td>
+                            <td>{{ tx.event_type }}</td>
+                            <td class="{% if tx.direction == 'credit' %}text-credit{% else %}text-debit{% endif %}">
+                                {% if tx.direction == 'credit' %}+{% else %}-{% endif %}{{ tx.amount|floatformat:0 }}
+                            </td>
+                            <td class="text-muted">{{ tx.description|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div style="text-align: center; padding-top: 1rem;">
+                    <a href="/loyalty/journal/" class="btn btn-primary" style="text-decoration: none; font-size: 0.9rem; padding: 0.5rem 1.5rem;">Все операции →</a>
+                </div>
+                {% else %}
+                <p class="text-muted" style="padding: 2rem; text-align: center;">Нет операций</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+    <script>
+    // Period change
+    function changePeriod() {
+        const period = document.getElementById('periodInput').value;
+        if (period) window.location.href = '/loyalty/dashboard/?period=' + period;
+    }
+
+    // === Charts ===
+    const tierData = JSON.parse('{{ tier_distribution|safe }}');
+    const timelineLabels = JSON.parse('{{ timeline_labels|safe }}');
+    const timelineAccrued = JSON.parse('{{ timeline_accrued|safe }}');
+    const timelineSpent = JSON.parse('{{ timeline_spent|safe }}');
+
+    const tierColors = {
+        'none': '#bdc3c7', 'bronze': '#cd7f32', 'silver': '#95a5a6',
+        'gold': '#f39c12', 'platinum': '#667eea'
+    };
+    const tierLabelsMap = {
+        'none': 'Без уровня', 'bronze': 'Бронза', 'silver': 'Серебро',
+        'gold': 'Золото', 'platinum': 'Платина'
+    };
+
+    // Timeline Chart
+    if (timelineLabels.length > 0) {
+        new Chart(document.getElementById('timelineChart'), {
+            type: 'line',
+            data: {
+                labels: timelineLabels,
+                datasets: [
+                    {
+                        label: 'Начислено',
+                        data: timelineAccrued,
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Списано',
+                        data: timelineSpent,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    } else {
+        document.getElementById('timelineChart').parentElement.innerHTML =
+            '<p style="text-align:center;color:#95a5a6;padding:4rem 0;">Нет данных за последние 30 дней</p>';
+    }
+
+    // Tier Pie Chart
+    if (tierData.length > 0) {
+        new Chart(document.getElementById('tierChart'), {
+            type: 'doughnut',
+            data: {
+                labels: tierData.map(d => tierLabelsMap[d.tier] || d.tier),
+                datasets: [{
+                    data: tierData.map(d => d.cnt),
+                    backgroundColor: tierData.map(d => tierColors[d.tier] || '#bdc3c7'),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } }
+                },
+                cutout: '55%'
+            }
+        });
+    } else {
+        document.getElementById('tierChart').parentElement.innerHTML =
+            '<p style="text-align:center;color:#95a5a6;padding:4rem 0;">Нет данных о распределении</p>';
+    }
+    </script>
+</body>
+</html>

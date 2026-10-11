@@ -1,0 +1,168 @@
+{# Единый компонент боковой навигации для CRM. Параметры: active_page - идентификатор активной страницы #}
+
+{% load static %}
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+        <h2>CRM</h2>
+        {% if user %}
+        <div class="sidebar-user-info">
+            {% if user.is_director %}Директор{% elif user.is_partner %}Партнёр · {{ user.name }}{% else %}{{ user.name }}{% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <nav class="sidebar-nav">
+        {# ==================== ДИРЕКТОР: ОСНОВНОЕ МЕНЮ ==================== #}
+        {% if user.is_director %}
+        
+        {# --- Главная --- #}
+        <a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">
+            <span class="icon">📊</span> Дашборд
+        </a>
+        <a href="{% url 'bot_app:analytics' %}" class="{% if active_page == 'analytics' %}active{% endif %}">
+            <span class="icon">📈</span> Аналитика
+        </a>
+        
+        {# --- РАЗДЕЛ: Списки --- #}
+        <div class="sidebar-section">СПИСКИ</div>
+        <a href="{% url 'bot_app:crm_clients' %}" class="sub-item {% if active_page == 'crm_clients' %}active{% endif %}">
+            <span class="icon">👤</span> Контакты
+        </a>
+        <a href="{% url 'bot_app:crm_companies' %}" class="sub-item {% if active_page == 'crm_companies' %}active{% endif %}">
+            <span class="icon">🏢</span> Компании
+        </a>
+
+        <a href="{% url 'bot_app:crm_orders' %}" class="sub-item {% if active_page == 'crm_orders' %}active{% endif %}">
+            <span class="icon">📋</span> Сделки / Заказы
+        </a>
+        <a href="{% url 'bot_app:crm_chats' %}" class="sub-item {% if active_page == 'crm_chats' %}active{% endif %}">
+            <span class="icon">💬</span> Чаты
+        </a>
+        <a href="{% url 'bot_app:crm_tasks' %}" class="sub-item {% if active_page == 'crm_tasks' %}active{% endif %}">
+            <span class="icon">&#9745;</span> Задачи
+        </a>
+
+        {# --- РАЗДЕЛ: Финансы --- #}
+        <div class="sidebar-section">ФИНАНСЫ</div>
+        <a href="{% url 'bot_app:financial_dashboard' %}" class="{% if active_page == 'financial_dashboard' %}active{% endif %}">
+            <span class="icon">📈</span> Система лояльности
+        </a>
+        <a href="{% url 'bot_app:loyalty_policies' %}" class="sub-item {% if active_page == 'loyalty_policies' %}active{% endif %}">
+            <span class="icon">📋</span> Нормативы
+        </a>
+        <a href="{% url 'bot_app:partner_finance' %}" class="sub-item {% if active_page == 'partner_finance' %}active{% endif %}">
+            <span class="icon">💰</span> Финансы партнёров
+        </a>
+        <a href="{% url 'bot_app:loyalty_journal' %}" class="sub-item {% if active_page == 'loyalty_journal' %}active{% endif %}">
+            <span class="icon">📒</span> Журнал операций
+        </a>
+        <a href="{% url 'bot_app:manual_operations' %}" class="sub-item {% if active_page == 'manual_operations' %}active{% endif %}">
+            <span class="icon">✋</span> Ручные операции
+        </a>
+        <a href="{% url 'bot_app:loyalty_analytics' %}" class="sub-item {% if active_page == 'loyalty_analytics' %}active{% endif %}">
+            <span class="icon">🔍</span> Аналитика ЛП
+        </a>
+        
+        {# --- РАЗДЕЛ: Инструменты --- #}
+        <div class="sidebar-section">ИНСТРУМЕНТЫ</div>
+        <a href="{% url 'bot_app:notifications' %}" class="{% if active_page == 'notifications' %}active{% endif %}">
+            <span class="icon">🔔</span> Уведомления
+            {% if unread_notif_count %}
+                <span class="notif-count" id="notifBadge">{{ unread_notif_count }}</span>
+            {% else %}
+                <span class="notif-count" id="notifBadge" style="display:none;">0</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'bot_app:notifications_renewal' %}" class="sub-item {% if active_page == 'notifications_renewal' %}active{% endif %}">
+            <span class="icon">♻️</span> Продление
+        </a>
+        <a href="{% url 'bot_app:notifications_calendar' %}" class="sub-item {% if active_page == 'notifications_calendar' %}active{% endif %}">
+            <span class="icon">📅</span> Календарь
+        </a>
+        
+        {# --- РАЗДЕЛ: Управление --- #}
+        <div class="sidebar-section">УПРАВЛЕНИЕ</div>
+        <a href="{% url 'bot_app:specialists_manage' %}" class="{% if active_page == 'specialists_manage' %}active{% endif %}">
+            <span class="icon">👥</span> Специалисты
+        </a>
+        <a href="{% url 'bot_app:system_settings' %}" class="{% if active_page == 'system_settings' %}active{% endif %}">
+            <span class="icon">⚙️</span> Настройки
+        </a>
+
+        {# --- РАЗДЕЛ: Аккаунт --- #}
+        <div class="sidebar-section">АККАУНТ</div>
+        <a href="{% url 'bot_app:logout' %}" class="logout-link">
+            <span class="icon">🚪</span> Выйти ({{ user.name }})
+        </a>
+        
+        {# ==================== ПАРТНЁР: МИНИМАЛЬНОЕ МЕНЮ ==================== #}
+        {% elif user.is_partner %}
+
+        <a href="{% url 'bot_app:partner_clients' %}" class="partner-item {% if active_page == 'partner_clients' %}active{% endif %}">
+            <span class="icon">👥</span> Клиенты
+        </a>
+        <a href="{% url 'bot_app:partner_companies' %}" class="partner-item {% if active_page == 'partner_companies' %}active{% endif %}">
+            <span class="icon">🏢</span> Компании
+        </a>
+        <a href="{% url 'bot_app:partner_chats' %}" class="partner-item {% if active_page == 'partner_chats' %}active{% endif %}">
+            <span class="icon">💬</span> Мои обращения
+        </a>
+        <a href="{% url 'bot_app:partner_analytics' %}" class="partner-item {% if active_page == 'partner_analytics' %}active{% endif %}">
+            <span class="icon">📈</span> Аналитика
+        </a>
+
+        <div class="sidebar-section">АККАУНТ</div>
+        <a href="{% url 'bot_app:logout' %}" class="logout-link partner-logout">
+            <span class="icon">🚪</span> Выйти ({{ user.name }})
+        </a>
+
+        {# ==================== СПЕЦИАЛИСТ: УПРОЩЁННОЕ МЕНЮ ==================== #}
+        {% elif user.is_specialist %}
+        
+        {# --- Главная специалиста --- #}
+        <a href="{% url 'bot_app:specialist_panel' %}" class="{% if active_page == 'specialist_panel' %}active{% endif %}">
+            <span class="icon">💬</span> Мои чаты
+        </a>
+        <a href="{% url 'bot_app:crm_tasks' %}" class="{% if active_page == 'crm_tasks' %}active{% endif %}">
+            <span class="icon">&#9745;</span> Мои задачи
+        </a>
+
+        {% if user.is_tech_support %}
+        {# --- Раздел техподдержки: чаты, клиенты, сделки --- #}
+        <div class="sidebar-section">ТЕХПОДДЕРЖКА</div>
+        <a href="{% url 'bot_app:crm_chats' %}" class="sub-item {% if active_page == 'crm_chats' %}active{% endif %}">
+            <span class="icon">💬</span> Чаты техподдержки
+        </a>
+        <a href="{% url 'bot_app:crm_clients' %}" class="sub-item {% if active_page == 'crm_clients' %}active{% endif %}">
+            <span class="icon">👤</span> Мои клиенты
+        </a>
+        <a href="{% url 'bot_app:crm_orders' %}" class="sub-item {% if active_page == 'crm_orders' %}active{% endif %}">
+            <span class="icon">📋</span> Мои сделки
+        </a>
+        {% endif %}
+
+        {# --- РАЗДЕЛ: Финансы специалиста --- #}
+        <div class="sidebar-section">ФИНАНСЫ</div>
+        <a href="{% url 'bot_app:partner_cabinet' %}" class="{% if active_page == 'partner_cabinet' %}active{% endif %}">
+            <span class="icon">💰</span> Мои финансы
+        </a>
+        
+        {# --- РАЗДЕЛ: Аккаунт --- #}
+        <div class="sidebar-section">АККАУНТ</div>
+        <a href="{% url 'bot_app:logout' %}" class="logout-link">
+            <span class="icon">🚪</span> Выйти ({{ user.name }})
+        </a>
+        
+        {% else %}
+        
+        {# ==================== ГОСТЕВОЙ / НЕИЗВЕСТНЫЙ ПОЛЬЗОВАТЕЛЬ ==================== #}
+        <div class="sidebar-section">АККАУНТ</div>
+        <a href="{% url 'bot_app:logout' %}" class="logout-link">
+            <span class="icon">🚪</span> Выйти
+        </a>
+        
+        {% endif %}
+    </nav>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>

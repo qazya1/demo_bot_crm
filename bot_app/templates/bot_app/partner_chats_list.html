@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои обращения партнёра</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        .page { width: min(1200px, 100%); margin: 0 auto; padding: 1.2rem; }
+        .card { background:#fff; border:1px solid #e7ebf5; border-radius:14px; box-shadow:0 8px 22px rgba(15,23,42,.06); }
+        .head { padding:1rem 1.1rem; border-bottom:1px solid #edf1f7; }
+        table { width:100%; border-collapse: collapse; min-width: 900px; }
+        th,td { padding:.8rem; border-bottom:1px solid #eef2f7; text-align:left; }
+        th { background:#f8faff; font-size:.78rem; text-transform:uppercase; color:#667085; }
+        .badge { padding:.22rem .6rem; border-radius:999px; font-size:.74rem; font-weight:700; display:inline-block; }
+        .b-partner { background:#ede9fe; color:#5b21b6; }
+        .b-active { background:#dcfce7; color:#166534; }
+        .b-pending { background:#fff3cd; color:#92400e; }
+        .b-closed { background:#e2e8f0; color:#475569; }
+        .btn { display:inline-block; padding:.45rem .75rem; border-radius:8px; text-decoration:none; background:#4f46e5; color:#fff; font-weight:600; }
+        .empty { padding:2rem; text-align:center; color:#64748b; }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='partner_chats' %}
+    <div class="main-content">
+        <div class="page">
+            <div class="card">
+                <div class="head">
+                    <h1>💬 Мои обращения</h1>
+                    <p style="margin-top:.35rem;color:#64748b;">Ваш постоянный чат с директором и остальные обращения к специалистам.</p>
+                </div>
+                {% if chats %}
+                <div style="overflow:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Тип</th>
+                                <th>Категория</th>
+                                <th>Статус</th>
+                                <th>Специалист</th>
+                                <th>Обновления</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for c in chats %}
+                            <tr>
+                                <td>#{{ c.id }}</td>
+                                <td>
+                                    {% if c.request_type == 'partner_director' %}
+                                        <span class="badge b-partner">Чат с директором</span>
+                                    {% else %}
+                                        {{ c.request_type|default:'—' }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ c.category|default:'—' }}</td>
+                                <td>
+                                    {% if c.status == 'active' or c.status == 'consultation' %}
+                                        <span class="badge b-active">{{ c.status }}</span>
+                                    {% elif c.status == 'pending' %}
+                                        <span class="badge b-pending">{{ c.status }}</span>
+                                    {% else %}
+                                        <span class="badge b-closed">{{ c.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ c.specialist_name|default:'—' }}</td>
+                                <td>
+                                    {% if c.has_new_messages %}
+                                        <span class="badge b-partner">{% if c.unread_for_partner|default:0 > 1 %}{{ c.unread_for_partner }} новых{% else %}Новое{% endif %}</span>
+                                    {% endif %}
+                                </td>
+                                <td><a class="btn" href="{% url 'bot_app:partner_chat_detail' c.id %}?next={% url 'bot_app:partner_chats' %}">Открыть чат</a></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <div class="empty">
+                        <h3>Чаты пока недоступны</h3>
+                        <p>Проверьте, что партнёрский профиль связан с записью пользователя в боте.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

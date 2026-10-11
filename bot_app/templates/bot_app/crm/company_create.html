@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Новая компания - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #2c3e50; }
+        .header { background: white; padding: 1.25rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+        .header h1 { font-size: 1.5rem; font-weight: 600; color: #2c3e50; }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+
+        /* Breadcrumb */
+        .breadcrumb { padding: 1rem 2rem 0; color: #95a5a6; font-size: 0.9rem; }
+        .breadcrumb a { color: #667eea; text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb span { margin: 0 0.5rem; }
+
+        /* Content */
+        .content { padding: 1.5rem 2rem; }
+
+        /* Form card */
+        .form-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; max-width: 760px; }
+        .form-card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #ecf0f1; font-weight: 600; font-size: 1.05rem; color: #2c3e50; }
+
+        /* Form layout */
+        .form-body { padding: 1.5rem; }
+        .form-section { margin-bottom: 1.5rem; }
+        .form-section-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #95a5a6; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #ecf0f1; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .form-row.single { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-group label { font-size: 0.85rem; font-weight: 500; color: #2c3e50; }
+        .form-group label .required { color: #e74c3c; margin-left: 2px; }
+        .form-group input, .form-group textarea { padding: 0.65rem 0.9rem; border: 1.5px solid #e0e0e0; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; color: #2c3e50; font-family: inherit; }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #667eea; }
+        .form-group input.error { border-color: #e74c3c; }
+        .form-group .error-msg { font-size: 0.8rem; color: #e74c3c; }
+        .form-group .hint { font-size: 0.78rem; color: #95a5a6; }
+
+        /* Buttons */
+        .form-actions { padding: 1.25rem 1.5rem; background: #f8f9fa; border-top: 1px solid #ecf0f1; display: flex; gap: 1rem; justify-content: flex-end; }
+        .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.65rem 1.4rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; text-decoration: none; cursor: pointer; border: none; transition: all 0.2s; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd8; }
+        .btn-secondary { background: white; color: #2c3e50; border: 1.5px solid #e0e0e0; }
+        .btn-secondary:hover { background: #f8f9fa; }
+
+        /* Mobile responsive */
+        .burger-menu { display: none; background: none; border: none; color: #2c3e50; font-size: 1.5rem; cursor: pointer; padding: 0.5rem; line-height: 1; }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; }
+        .sidebar-overlay.active { display: block; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .burger-menu { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+            .sidebar-nav a { min-height: 48px; }
+            .header { padding: 0.75rem 1rem; gap: 0.5rem; }
+            .header h1 { font-size: 1.2rem; }
+            .header-actions .btn { padding: 0.5rem 0.8rem; font-size: 0.8rem; min-height: 44px; }
+            .breadcrumb { padding: 0.75rem 1rem 0; }
+            .content { padding: 0.75rem; }
+            .form-row { grid-template-columns: 1fr; }
+            .form-body { padding: 1rem; }
+            .form-group input, .form-group textarea { font-size: 16px; min-height: 44px; }
+            .form-actions { padding: 1rem; flex-wrap: wrap; }
+            .form-actions .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page=partner_mode|yesno:'partner_companies,crm_companies' %}
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <h1>Новая компания</h1>
+            <div class="header-actions">
+                <a href="{% if partner_mode %}{% url 'bot_app:partner_companies' %}{% else %}{% url 'bot_app:crm_companies' %}{% endif %}" class="btn btn-secondary">Назад к списку</a>
+            </div>
+        </div>
+
+        <div class="breadcrumb">
+            <a href="{% if partner_mode %}{% url 'bot_app:partner_companies' %}{% else %}{% url 'bot_app:crm_companies' %}{% endif %}">Компании</a>
+            <span>/</span>
+            Новая компания
+        </div>
+
+        <div class="content">
+            <div class="form-card">
+                <div class="form-card-header">Данные компании</div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-body">
+
+                        <div class="form-section">
+                            <div class="form-section-title">Основная информация</div>
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label for="name">Название компании <span class="required">*</span></label>
+                                    <input type="text" id="name" name="name"
+                                           value="{{ form_data.name|default:'' }}"
+                                           placeholder="ООО Ромашка"
+                                           class="{% if errors.name %}error{% endif %}">
+                                    {% if errors.name %}<span class="error-msg">{{ errors.name }}</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label for="description">Описание</label>
+                                    <textarea id="description" name="description" rows="3"
+                                              placeholder="Краткое описание деятельности компании">{{ form_data.description|default:'' }}</textarea>
+                                </div>
+                            </div>
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label for="note">Заметка</label>
+                                    <textarea id="note" name="note" rows="4"
+                                              placeholder="Важные детали по компании, договоренности, комментарии...">{{ form_data.note|default:'' }}</textarea>
+                                    <span class="hint">Заметка будет доступна в карточке компании и для редактирования после создания.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="form-section-title">Реквизиты</div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="inn">ИНН</label>
+                                    <input type="text" id="inn" name="inn"
+                                           value="{{ form_data.inn|default:'' }}"
+                                           placeholder="1234567890"
+                                           class="{% if errors.inn %}error{% endif %}">
+                                    {% if errors.inn %}<span class="error-msg">{{ errors.inn }}</span>{% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="kpp">КПП</label>
+                                    <input type="text" id="kpp" name="kpp"
+                                           value="{{ form_data.kpp|default:'' }}"
+                                           placeholder="123456789">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ogrn">ОГРН</label>
+                                    <input type="text" id="ogrn" name="ogrn"
+                                           value="{{ form_data.ogrn|default:'' }}"
+                                           placeholder="1234567890123">
+                                </div>
+                                <div class="form-group">
+                                    <label for="website">Сайт</label>
+                                    <input type="text" id="website" name="website"
+                                           value="{{ form_data.website|default:'' }}"
+                                           placeholder="https://example.ru">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="form-section-title">Контактная информация</div>
+                            <div class="form-row single">
+                                <div class="form-group">
+                                    <label for="address">Адрес</label>
+                                    <input type="text" id="address" name="address"
+                                           value="{{ form_data.address|default:'' }}"
+                                           placeholder="г. Москва, ул. Примерная, д. 1">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="phone">Телефон</label>
+                                    <input type="tel" id="phone" name="phone"
+                                           value="{{ form_data.phone|default:'+7' }}"
+                                           placeholder="+7 900 000 00 00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email</label>
+                                    <input type="email" id="email" name="email"
+                                           value="{{ form_data.email|default:'' }}"
+                                           placeholder="info@company.ru">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="form-actions">
+                        <a href="{% if partner_mode %}{% url 'bot_app:partner_companies' %}{% else %}{% url 'bot_app:crm_companies' %}{% endif %}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-primary">Создать компанию</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        const phoneInput = document.getElementById('phone');
+        if (!phoneInput.value) phoneInput.value = '+7';
+        phoneInput.addEventListener('focus', function() {
+            if (!this.value) this.value = '+7';
+        });
+        phoneInput.addEventListener('input', function() {
+            if (!this.value.startsWith('+7')) {
+                this.value = '+7' + this.value.replace(/^\+?7?/, '');
+            }
+        });
+    </script>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

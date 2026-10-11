@@ -1,0 +1,1128 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Аналитика - CRM Бот</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        /* ===== Base & Variables ===== */
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-soft: #eff6ff;
+            --max-color: #f59e0b;
+            --max-soft: #fffbeb;
+            --tg-color: #0ea5e9;
+            --tg-soft: #f0f9ff;
+            --success: #10b981;
+            --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.07), 0 2px 4px rgba(15, 23, 42, 0.06);
+            --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.08), 0 4px 6px rgba(15, 23, 42, 0.05);
+            --radius: 12px;
+            --radius-lg: 16px;
+        }
+
+        body { background: var(--bg-primary); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem 1.75rem; }
+        
+        /* ===== Page Header ===== */
+        .page-header {
+            margin: 1.25rem 1.5rem 1.5rem;
+            padding: 1.5rem 1.625rem;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+        .page-header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .page-header h1 {
+            font-size: 2rem;
+            font-weight: 750;
+            color: var(--text-primary);
+            margin: 0;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+        }
+        .page-header .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+            font-weight: 500;
+            line-height: 1.4;
+            letter-spacing: -0.005em;
+            max-width: 740px;
+        }
+
+        /* ===== KPI Cards ===== */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.875rem; }
+        
+        .kpi-card {
+            background: var(--bg-card);
+            padding: 1.125rem 1.25rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            transition: all 0.18s ease;
+            position: relative;
+            overflow: hidden;
+            min-height: 148px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .kpi-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+        
+        /* Primary KPI - Total Users */
+        .kpi-card.kpi-primary {
+            background: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-card) 100%);
+            border-color: var(--accent);
+        }
+        .kpi-card.kpi-primary .value { color: var(--accent); }
+        
+        .kpi-card .label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        .kpi-card .label svg { width: 14px; height: 14px; opacity: 0.7; }
+        
+        .kpi-card .value {
+            font-size: 2.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+        }
+        .kpi-card.kpi-primary .value { font-size: 2.3rem; }
+        
+        .kpi-card .subtext {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.625rem;
+            font-weight: 400;
+        }
+
+        /* ===== Section ===== */
+        .section {
+            background: var(--bg-card);
+            padding: 1.375rem 1.5rem 1.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+        .section h2 {
+            font-size: 1.03rem;
+            font-weight: 650;
+            color: var(--text-primary);
+            margin: 0 0 1rem 0;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-light);
+            letter-spacing: -0.01em;
+        }
+
+        /* ===== Platform Comparison ===== */
+        .platform-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        
+        .platform-card {
+            background: var(--bg-card);
+            padding: 1.25rem 1.125rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+            position: relative;
+            min-height: 246px;
+        }
+        .platform-card:hover { border-color: #cbd5e1; }
+        
+        .platform-card.max { border-color: var(--max-color); }
+        .platform-card.tg { border-color: var(--tg-color); }
+        
+        .platform-card.leader {
+            background: linear-gradient(180deg, #f8fbff 0%, var(--bg-card) 100%);
+            box-shadow: var(--shadow-md);
+        }
+        .platform-card.leader.max { border-color: var(--max-color); }
+        .platform-card.leader.tg { border-color: var(--tg-color); }
+        
+        .platform-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .platform-name {
+            font-size: 0.95rem;
+            font-weight: 650;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+        }
+        .platform-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8125rem;
+            color: white;
+            flex-shrink: 0;
+        }
+        .platform-icon.max { background: linear-gradient(135deg, var(--max-color) 0%, #d97706 100%); }
+        .platform-icon.tg { background: linear-gradient(135deg, var(--tg-color) 0%, #0284c7 100%); }
+        
+        .leader-badge {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            color: white;
+            padding: 0.25rem 0.625rem;
+            border-radius: 20px;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.25);
+        }
+        
+        .platform-stats { display: flex; flex-direction: column; gap: 0.75rem; }
+        
+        .platform-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.55rem 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .platform-stat:last-child { border-bottom: none; }
+        .platform-stat .stat-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 550; }
+        .platform-stat .stat-value { font-size: 1.3rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+        
+        /* Progress Bar */
+        .progress-section { margin-top: 0.875rem; padding-top: 0.875rem; border-top: 1px solid var(--border-light); }
+        .progress-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.375rem; font-weight: 500; }
+        .progress-bar { height: 6px; background: var(--border-light); border-radius: 3px; overflow: hidden; display: flex; }
+        .progress-bar .fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+        .progress-bar .fill.max { background: var(--max-color); }
+        .progress-bar .fill.tg { background: var(--tg-color); }
+        .progress-stats { display: flex; justify-content: space-between; margin-top: 0.375rem; font-size: 0.75rem; color: var(--text-muted); }
+
+        /* ===== Charts Grid ===== */
+        .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .chart-container { position: relative; height: 260px; }
+
+        /* ===== Revenue Section ===== */
+        .revenue-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.875rem; align-items: stretch; }
+        .revenue-subgrid { display: grid; grid-template-columns: 1fr; gap: 0.875rem; }
+        .revenue-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+        .revenue-filter label {
+            display: inline-block;
+            margin-bottom: 0.375rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .revenue-filter select {
+            min-width: 180px;
+            padding: 0.55rem 0.625rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        .revenue-tabs {
+            display: inline-flex;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.25rem;
+            gap: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .revenue-tab {
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            padding: 0.45rem 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .revenue-tab.active {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: var(--shadow-xs);
+        }
+        .revenue-subtabs {
+            display: none;
+            margin-bottom: 0.75rem;
+        }
+        .revenue-subtabs.visible {
+            display: inline-flex;
+        }
+        .revenue-state {
+            margin-bottom: 0.875rem;
+            padding: 0.625rem 0.75rem;
+            border-radius: 8px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-light);
+            color: var(--text-primary);
+            font-size: 0.8125rem;
+            font-weight: 600;
+        }
+        .revenue-card.primary {
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .revenue-card.primary .value {
+            font-size: 2rem;
+        }
+        
+        .revenue-card {
+            text-align: center;
+            padding: 1.25rem 1rem;
+            background: var(--bg-primary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            transition: all 0.15s ease;
+        }
+        .revenue-card:hover { box-shadow: var(--shadow-sm); }
+        
+        .revenue-card .label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 0.625rem;
+        }
+        .revenue-card .value {
+            font-size: 1.625rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+        .revenue-card.bots .value { color: var(--success); }
+        .revenue-card.manual .value { color: #8b5cf6; }
+        .revenue-card.chats .value { color: var(--tg-color); }
+        .revenue-card.shop .value { color: var(--max-color); }
+        .revenue-card.total {
+            background: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-card) 100%);
+            border-color: var(--accent);
+        }
+        .revenue-card.total .value { font-size: 1.875rem; color: var(--accent); }
+
+        /* ===== Referral Section ===== */
+        .ref-code-block { background: var(--bg-card); border-radius: var(--radius); margin-bottom: 0.625rem; border: 1px solid var(--border); transition: all 0.15s ease; }
+        .ref-code-block:hover { box-shadow: var(--shadow-sm); }
+        .ref-code-header { display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1rem; cursor: pointer; transition: background 0.15s; border-radius: var(--radius); }
+        .ref-code-header:hover { background: var(--bg-primary); }
+        .ref-code-info { display: flex; align-items: center; gap: 0.625rem; }
+        .ref-code-name { font-weight: 600; color: var(--text-primary); font-size: 0.9375rem; }
+        .ref-code-owner { font-size: 0.8125rem; color: var(--text-secondary); }
+        .ref-code-stats { display: flex; align-items: center; gap: 0.625rem; }
+        .ref-count { font-size: 1.0625rem; font-weight: 700; color: var(--accent); }
+        .ref-count-label { font-size: 0.75rem; color: var(--text-muted); }
+        .ref-toggle-icon { font-size: 0.75rem; color: var(--text-muted); transition: transform 0.2s; }
+        .ref-code-block.open .ref-toggle-icon { transform: rotate(180deg); }
+        .ref-code-body { padding: 0 1rem 1rem; display: none; }
+        .ref-code-block.open .ref-code-body { display: block; }
+
+        .ref-links-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.875rem; margin-top: 0.875rem; }
+        .ref-link-card { background: var(--bg-card); border-radius: var(--radius); padding: 1rem; border: 1px solid var(--border); }
+        .ref-link-tg { border-top: 2px solid var(--tg-color); }
+        .ref-link-max { border-top: 2px solid var(--max-color); }
+        .ref-link-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.625rem; }
+        .ref-link-icon { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; color: white; }
+        .ref-link-icon.tg { background: var(--tg-color); }
+        .ref-link-icon.max { background: var(--max-color); }
+        .ref-link-title { font-weight: 600; color: var(--text-primary); font-size: 0.875rem; }
+        .ref-link-url-row { display: flex; gap: 0.5rem; margin-bottom: 0.625rem; }
+        .ref-link-input { flex: 1; padding: 0.5rem 0.625rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.75rem; color: var(--text-secondary); background: var(--bg-primary); min-width: 0; }
+        .ref-copy-btn { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 0.5rem 0.625rem; cursor: pointer; font-size: 0.8125rem; transition: background 0.15s; display: flex; align-items: center; justify-content: center; }
+        .ref-copy-btn:hover { background: var(--accent-hover); }
+        .ref-qr-box { display: flex; justify-content: center; padding: 0.5rem 0; }
+        .ref-download-btn { display: block; width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--accent); font-weight: 600; font-size: 0.75rem; cursor: pointer; text-align: center; transition: all 0.15s; margin-top: 0.5rem; }
+        .ref-download-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* ===== Platform Badges ===== */
+        .ref-platform-badge { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; margin-left: 4px; }
+        .ref-platform-badge.tg { background: var(--tg-soft); color: var(--tg-color); }
+        .ref-platform-badge.max { background: var(--max-soft); color: var(--max-color); }
+
+        /* ===== Inline Users Section ===== */
+        .ref-users-section {
+            margin-top: 1rem;
+            border-top: 1px solid var(--border-light);
+            padding-top: 0.875rem;
+        }
+        .ref-users-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.625rem 0.75rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .ref-users-header:hover { background: var(--border-light); }
+        .ref-users-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .ref-users-title svg { color: var(--accent); }
+        .ref-users-badges { display: flex; align-items: center; gap: 0.375rem; }
+        .ref-users-toggle-icon { font-size: 0.75rem; color: var(--text-muted); transition: transform 0.2s; }
+        .ref-users-section.open .ref-users-toggle-icon { transform: rotate(180deg); }
+
+        .ref-users-panel { display: none; margin-top: 0.5rem; }
+        .ref-users-section.open .ref-users-panel { display: block; }
+
+        .ref-users-filter {
+            display: flex;
+            gap: 0.375rem;
+            margin-bottom: 0.625rem;
+            padding: 0.25rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+        }
+        .ref-filter-btn {
+            padding: 0.375rem 0.75rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+        }
+        .ref-filter-btn:hover { background: var(--bg-card); }
+        .ref-filter-btn.active { background: var(--accent); color: white; box-shadow: var(--shadow-xs); }
+        .ref-filter-btn.tg.active { background: var(--tg-color); color: white; }
+        .ref-filter-btn.max.active { background: var(--max-color); color: white; }
+
+        .ref-user-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0.875rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 0.375rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.15s;
+        }
+        .ref-user-card:hover { box-shadow: var(--shadow-sm); border-color: var(--accent); transform: translateY(-1px); }
+        .ref-user-card.hidden { display: none; }
+
+        .ref-user-main { display: flex; align-items: center; gap: 0.625rem; min-width: 0; flex: 1; }
+        .ref-user-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 22px;
+            border-radius: 4px;
+            font-size: 0.625rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 0.03em;
+            flex-shrink: 0;
+        }
+        .ref-user-badge.tg { background: var(--tg-color); }
+        .ref-user-badge.max { background: var(--max-color); }
+        .ref-user-badge.unknown { background: var(--text-muted); }
+
+        .ref-user-info { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+        .ref-user-name { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ref-user-tg { color: var(--accent); font-weight: 500; margin-left: 0.375rem; }
+        .ref-user-meta { font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .ref-user-status { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; margin-left: 0.75rem; }
+        .ref-verified { font-size: 0.6875rem; font-weight: 600; color: var(--success); }
+        .ref-not-verified { font-size: 0.6875rem; color: var(--text-muted); }
+        .ref-user-arrow { color: var(--accent); font-weight: 600; font-size: 0.875rem; opacity: 0; transition: opacity 0.15s; }
+        .ref-user-card:hover .ref-user-arrow { opacity: 1; }
+
+        /* ===== Toast ===== */
+        .ref-toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--text-primary); color: white; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 500; font-size: 0.875rem; z-index: 300; box-shadow: var(--shadow-lg); animation: refToastIn 0.3s ease; }
+        @keyframes refToastIn { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ===== Empty State ===== */
+        .empty-state { text-align: center; padding: 2.5rem 1.5rem; color: var(--text-secondary); background: var(--bg-primary); border-radius: var(--radius); }
+        .empty-state svg { width: 48px; height: 48px; opacity: 0.4; margin-bottom: 0.75rem; }
+
+        /* ===== Back Link ===== */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            padding: 0.375rem 0;
+            transition: opacity 0.15s;
+        }
+        .back-link:hover { opacity: 0.8; }
+
+        /* ===== Burger Menu ===== */
+        .burger-menu {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: color 0.15s;
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+        .burger-menu:hover {
+            color: var(--text-primary);
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 1024px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0; }
+            .container { padding: 1rem; }
+            .kpi-grid { grid-template-columns: 1fr; }
+            .platform-compare { grid-template-columns: 1fr; }
+            .revenue-grid, .revenue-subgrid { grid-template-columns: 1fr; }
+            .revenue-filters { flex-direction: column; align-items: flex-start; }
+            .ref-links-grid { grid-template-columns: 1fr; }
+            .page-header { margin: 1rem; padding: 1rem 1.125rem; gap: 0.75rem; }
+            .page-header h1 { font-size: 26px; }
+            .page-header .subtitle { font-size: 14px; }
+        }
+        @media (max-width: 480px) {
+            .page-header h1 { font-size: 22px; }
+            .page-header .subtitle { font-size: 13px; }
+            .revenue-filter select { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='analytics' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <div class="page-header-content">
+                <h1>Аналитика</h1>
+                <div class="subtitle">Аналитика по платформам и финансовая выручка по источнику денег</div>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card kpi-primary">
+                    <div class="label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        Всего пользователей
+                    </div>
+                    <div class="value">{{ analytics.users_total }}</div>
+                    <div class="subtext">Общая база</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        Пользователи MAX
+                    </div>
+                    <div class="value">{{ analytics.users_max }}</div>
+                    <div class="subtext">Платформа MAX</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                        </svg>
+                        Пользователи Telegram
+                    </div>
+                    <div class="value">{{ analytics.users_tg }}</div>
+                    <div class="subtext">Telegram бот</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        Всего покупок
+                    </div>
+                    <div class="value">{{ analytics.orders_total }}</div>
+                    <div class="subtext">Все заказы</div>
+                </div>
+            </div>
+
+            <!-- Platform Comparison -->
+            <div class="section">
+                <h2>Сравнение платформ</h2>
+                <div class="platform-compare">
+                    <div class="platform-card max {% if analytics.leader == 'max' %}leader{% endif %}">
+                        <div class="platform-header">
+                            <div class="platform-name">
+                                <span class="platform-icon max">M</span>
+                                MAX
+                            </div>
+                            {% if analytics.leader == 'max' %}
+                                <span class="leader-badge">Лидер</span>
+                            {% endif %}
+                        </div>
+                        <div class="platform-stats">
+                            <div class="platform-stat">
+                                <span class="stat-label">Покупки</span>
+                                <span class="stat-value">{{ analytics.orders_max }}</span>
+                            </div>
+                            <div class="platform-stat">
+                                <span class="stat-label">Пользователи</span>
+                                <span class="stat-value">{{ analytics.users_max }}</span>
+                            </div>
+                        </div>
+                        <div class="progress-section">
+                            <div class="progress-label">Доля пользователей</div>
+                            <div class="progress-bar" id="max-progress-bar">
+                                <div class="fill max" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-stats">
+                                <span id="max-progress-percent">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="platform-card tg {% if analytics.leader == 'tg' %}leader{% endif %}">
+                        <div class="platform-header">
+                            <div class="platform-name">
+                                <span class="platform-icon tg">TG</span>
+                                Telegram
+                            </div>
+                            {% if analytics.leader == 'tg' %}
+                                <span class="leader-badge">Лидер</span>
+                            {% endif %}
+                        </div>
+                        <div class="platform-stats">
+                            <div class="platform-stat">
+                                <span class="stat-label">Покупки</span>
+                                <span class="stat-value">{{ analytics.orders_tg }}</span>
+                            </div>
+                            <div class="platform-stat">
+                                <span class="stat-label">Пользователи</span>
+                                <span class="stat-value">{{ analytics.users_tg }}</span>
+                            </div>
+                        </div>
+                        <div class="progress-section">
+                            <div class="progress-label">Доля пользователей</div>
+                            <div class="progress-bar" id="tg-progress-bar">
+                                <div class="fill tg" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-stats">
+                                <span id="tg-progress-percent">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue -->
+            <div class="section">
+                <h2>Выручка</h2>
+                <form method="get" class="revenue-filters">
+                    <div class="revenue-filter">
+                        <label for="period">Период</label>
+                        <select id="period" name="period" onchange="this.form.submit()">
+                            <option value="all" {% if revenue_filters.period == 'all' %}selected{% endif %}>За всё время</option>
+                            <option value="7d" {% if revenue_filters.period == '7d' %}selected{% endif %}>7 дней</option>
+                            <option value="30d" {% if revenue_filters.period == '30d' %}selected{% endif %}>30 дней</option>
+                            <option value="90d" {% if revenue_filters.period == '90d' %}selected{% endif %}>90 дней</option>
+                        </select>
+                    </div>
+                </form>
+                <div class="revenue-tabs" id="revenue-main-tabs">
+                    <button class="revenue-tab active" type="button" data-tab="all">Все</button>
+                    <button class="revenue-tab" type="button" data-tab="bots">Боты</button>
+                    <button class="revenue-tab" type="button" data-tab="manual">Ручные сделки</button>
+                </div>
+                <div class="revenue-tabs revenue-subtabs" id="revenue-bots-subtabs">
+                    <button class="revenue-tab active" type="button" data-subtab="all">Все</button>
+                    <button class="revenue-tab" type="button" data-subtab="chats">Чаты</button>
+                    <button class="revenue-tab" type="button" data-subtab="shop">Магазин</button>
+                </div>
+                <div class="revenue-state" id="revenue-state-text"></div>
+                <div class="revenue-grid">
+                    <div class="revenue-card total primary" id="revenue-primary-card">
+                        <div class="label" id="revenue-primary-label">Итого</div>
+                        <div class="value" id="revenue-primary-value">{{ revenue.revenue_total|floatformat:0 }} ₽</div>
+                    </div>
+                    <div class="revenue-subgrid" id="revenue-secondary-cards"></div>
+                </div>
+                <div id="revenue-data"
+                    data-revenue-total="{{ revenue.revenue_total|floatformat:0 }}"
+                    data-bots-total="{{ revenue.bots_total|floatformat:0 }}"
+                    data-manual-total="{{ revenue.manual_total|floatformat:0 }}"
+                    data-bots-chats="{{ revenue.bots_chats|floatformat:0 }}"
+                    data-bots-shop="{{ revenue.bots_shop|floatformat:0 }}"
+                    data-period-label="{% if revenue_filters.period == 'all' %}за всё время{% elif revenue_filters.period == '7d' %}7 дней{% elif revenue_filters.period == '30d' %}30 дней{% else %}90 дней{% endif %}">
+                </div>
+                <div id="revenue-secondary-templates" style="display:none;">
+                    <div class="revenue-card bots" data-kind="bots"><div class="label">Боты</div><div class="value"></div></div>
+                    <div class="revenue-card manual" data-kind="manual"><div class="label">Ручные сделки</div><div class="value"></div></div>
+                    <div class="revenue-card chats" data-kind="chats"><div class="label">Боты → Чаты</div><div class="value"></div></div>
+                    <div class="revenue-card shop" data-kind="shop"><div class="label">Боты → Магазин</div><div class="value"></div></div>
+                    <div class="revenue-card total" data-kind="total"><div class="label">Итого</div><div class="value"></div></div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="section">
+                <h2>Визуализация</h2>
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <canvas id="ordersChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="usersChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referral Codes -->
+            <div class="section">
+                <h2>Реферальные ссылки</h2>
+                {% if referral_stats %}
+                    {% for ref in referral_stats %}
+                    <div class="ref-code-block" id="ref-block-{{ ref.id }}">
+                        <div class="ref-code-header" onclick="toggleRefBlock({{ ref.id }})">
+                            <div class="ref-code-info">
+                                <span class="ref-code-name">{{ ref.code }}</span>
+                                <span class="ref-code-owner">{{ ref.owner_name }}</span>
+                                <span class="ref-platform-badge {% if ref.code_type == 'user' %}tg{% else %}max{% endif %}">
+                                    {% if ref.code_type == 'user' %}Пользовательский{% else %}Ручной{% endif %}
+                                </span>
+                            </div>
+                            <div class="ref-code-stats">
+                                <span class="ref-count">{{ ref.users_count }}</span>
+                                <span class="ref-count-label">приглаш.</span>
+                                {% if ref.tg_count %}<span class="ref-platform-badge tg">TG {{ ref.tg_count }}</span>{% endif %}
+                                {% if ref.max_count %}<span class="ref-platform-badge max">Max {{ ref.max_count }}</span>{% endif %}
+                                <span class="ref-toggle-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="ref-code-body">
+                            <!-- Ссылки и QR -->
+                            <div class="ref-links-grid">
+                                <div class="ref-link-card ref-link-tg">
+                                    <div class="ref-link-header">
+                                        <span class="ref-link-icon tg">TG</span>
+                                        <span class="ref-link-title">Telegram</span>
+                                    </div>
+                                    <div class="ref-link-url-row">
+                                        <input type="text" readonly class="ref-link-input" id="tg-link-{{ ref.id }}" value="https://t.me/{{ tg_bot_username }}?start=ref_{{ ref.code }}">
+                                        <button class="ref-copy-btn" onclick="copyLink('tg-link-{{ ref.id }}')">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                        </button>
+                                    </div>
+                                    <div class="ref-qr-box"><canvas id="qr-tg-{{ ref.id }}"></canvas></div>
+                                    <button class="ref-download-btn" onclick="downloadQR('qr-tg-{{ ref.id }}', 'qr_tg_{{ ref.code }}.png')">Скачать QR</button>
+                                </div>
+                                <div class="ref-link-card ref-link-max">
+                                    <div class="ref-link-header">
+                                        <span class="ref-link-icon max">M</span>
+                                        <span class="ref-link-title">Max</span>
+                                    </div>
+                                    <div class="ref-link-url-row">
+                                        <input type="text" readonly class="ref-link-input" id="max-link-{{ ref.id }}" value="https://max.ru/{{ max_bot_username }}?start=ref_{{ ref.code }}">
+                                        <button class="ref-copy-btn" onclick="copyLink('max-link-{{ ref.id }}')">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                        </button>
+                                    </div>
+                                    <div class="ref-qr-box"><canvas id="qr-max-{{ ref.id }}"></canvas></div>
+                                    <button class="ref-download-btn" onclick="downloadQR('qr-max-{{ ref.id }}', 'qr_max_{{ ref.code }}.png')">Скачать QR</button>
+                                </div>
+                            </div>
+
+                            <!-- Инлайн-список пользователей -->
+                            {% if ref.users %}
+                            <div class="ref-users-section">
+                                <div class="ref-users-header" onclick="toggleUsersPanel({{ ref.id }})">
+                                    <div class="ref-users-title">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                        <span>Закреплённые приглашённые ({{ ref.users|length }})</span>
+                                    </div>
+                                    <div class="ref-users-badges">
+                                        {% if ref.tg_count %}<span class="ref-platform-badge tg">TG {{ ref.tg_count }}</span>{% endif %}
+                                        {% if ref.max_count %}<span class="ref-platform-badge max">Max {{ ref.max_count }}</span>{% endif %}
+                                        <span class="ref-users-toggle-icon">▼</span>
+                                    </div>
+                                </div>
+
+                                <div class="ref-users-panel" id="users-panel-{{ ref.id }}">
+                                    <!-- Фильтр по платформе -->
+                                    <div class="ref-users-filter" id="users-filter-{{ ref.id }}">
+                                        <button class="ref-filter-btn active" onclick="filterUsers({{ ref.id }}, 'all', this)">Все ({{ ref.users|length }})</button>
+                                        {% if ref.tg_count %}<button class="ref-filter-btn tg" onclick="filterUsers({{ ref.id }}, 'telegram', this)">TG ({{ ref.tg_count }})</button>{% endif %}
+                                        {% if ref.max_count %}<button class="ref-filter-btn max" onclick="filterUsers({{ ref.id }}, 'max', this)">Max ({{ ref.max_count }})</button>{% endif %}
+                                    </div>
+
+                                    {% for u in ref.users %}
+                                    <a href="/crm/client/{{ u.id }}/" class="ref-user-card" data-platform="{{ u.source_platform|default:'unknown' }}" data-ref="{{ ref.id }}">
+                                        <div class="ref-user-main">
+                                            {% if u.source_platform == 'telegram' %}
+                                                <span class="ref-user-badge tg">TG</span>
+                                            {% elif u.source_platform == 'max' %}
+                                                <span class="ref-user-badge max">Max</span>
+                                            {% else %}
+                                                <span class="ref-user-badge unknown">?</span>
+                                            {% endif %}
+                                            <div class="ref-user-info">
+                                                <span class="ref-user-name">
+                                                    {{ u.first_name|default:"" }} {{ u.last_name|default:"" }}
+                                                    {% if u.tg_username %}<span class="ref-user-tg">@{{ u.tg_username }}</span>{% endif %}
+                                                </span>
+                                                <span class="ref-user-meta">
+                                                    {% if u.phone %}{{ u.phone }}{% endif %}
+                                                    {% if u.city %} · {{ u.city }}{% endif %}
+                                                    {% if u.activated_at %} · {{ u.activated_at|ru_date }}{% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="ref-user-status">
+                                            {% if u.is_verified %}<span class="ref-verified">Верифицирован</span>{% else %}<span class="ref-not-verified">Не верифицирован</span>{% endif %}
+                                            <span class="ref-user-arrow">→</span>
+                                        </div>
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                            <polyline points="13 2 13 9 20 9"></polyline>
+                        </svg>
+                        <p>Нет реферальных кодов</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% include 'bot_app/_sidebar_scripts.html' %}
+
+        <!-- Chart.js -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <!-- QR Code -->
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+        
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ===== Progress Bars for Platform Comparison =====
+            var usersMax = {{ analytics.users_max|default:0 }};
+            var usersTg = {{ analytics.users_tg|default:0 }};
+            var totalUsers = usersMax + usersTg;
+            
+            if (totalUsers > 0) {
+                var maxPercent = Math.round((usersMax / totalUsers) * 100);
+                var tgPercent = Math.round((usersTg / totalUsers) * 100);
+                
+                // Animate progress bars
+                setTimeout(function() {
+                    document.querySelector('#max-progress-bar .fill').style.width = maxPercent + '%';
+                    document.querySelector('#tg-progress-bar .fill').style.width = tgPercent + '%';
+                    document.getElementById('max-progress-percent').textContent = maxPercent + '%';
+                    document.getElementById('tg-progress-percent').textContent = tgPercent + '%';
+                }, 300);
+            }
+
+            // ===== Charts =====
+            // Bar Chart - Orders by Platform
+            var ordersCtx = document.getElementById('ordersChart').getContext('2d');
+            new Chart(ordersCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['MAX', 'Telegram'],
+                    datasets: [{
+                        label: 'Покупки',
+                        data: [{{ analytics.orders_max|default:0 }}, {{ analytics.orders_tg|default:0 }}],
+                        backgroundColor: ['#f59e0b', '#0ea5e9'],
+                        borderRadius: 8,
+                        barThickness: 80,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Покупки по платформам', font: { size: 13, weight: '600' }, color: '#0f172a', padding: { bottom: 16 } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#64748b', font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 12, weight: '500' } } }
+                    }
+                }
+            });
+
+            // Pie Chart - User Distribution
+            var usersCtx = document.getElementById('usersChart').getContext('2d');
+            new Chart(usersCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Только MAX', 'Только Telegram', 'Обе платформы'],
+                    datasets: [{
+                        data: [
+                            {{ analytics.user_distribution.0.value|default:0 }},
+                            {{ analytics.user_distribution.1.value|default:0 }},
+                            {{ analytics.user_distribution.2.value|default:0 }}
+                        ],
+                        backgroundColor: ['#f59e0b', '#0ea5e9', '#10b981'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, font: { size: 11 }, color: '#64748b' } },
+                        title: { display: true, text: 'Распределение пользователей', font: { size: 13, weight: '600' }, color: '#0f172a', padding: { bottom: 16 } }
+                    },
+                    cutout: '55%',
+                }
+            });
+
+            // ===== Revenue tabs UX =====
+            var revenueRoot = document.getElementById('revenue-data');
+            if (revenueRoot) {
+                var revenueValues = {
+                    total: Number(revenueRoot.dataset.revenueTotal || 0),
+                    bots: Number(revenueRoot.dataset.botsTotal || 0),
+                    manual: Number(revenueRoot.dataset.manualTotal || 0),
+                    chats: Number(revenueRoot.dataset.botsChats || 0),
+                    shop: Number(revenueRoot.dataset.botsShop || 0)
+                };
+                var periodLabel = revenueRoot.dataset.periodLabel || '30 дней';
+                var mainTab = 'all';
+                var botsSubtab = 'all';
+
+                function formatRub(amount) {
+                    return new Intl.NumberFormat('ru-RU').format(amount) + ' ₽';
+                }
+
+                function setPrimary(label, value, cardClass) {
+                    var primaryCard = document.getElementById('revenue-primary-card');
+                    primaryCard.className = 'revenue-card primary ' + cardClass;
+                    document.getElementById('revenue-primary-label').textContent = label;
+                    document.getElementById('revenue-primary-value').textContent = formatRub(value);
+                }
+
+                function addSecondary(kind, value) {
+                    var grid = document.getElementById('revenue-secondary-cards');
+                    var template = document.querySelector('#revenue-secondary-templates [data-kind="' + kind + '"]');
+                    if (!template) return;
+                    var card = template.cloneNode(true);
+                    card.querySelector('.value').textContent = formatRub(value);
+                    grid.appendChild(card);
+                }
+
+                function renderRevenue() {
+                    var stateText = '';
+                    var secondary = document.getElementById('revenue-secondary-cards');
+                    secondary.innerHTML = '';
+
+                    if (mainTab === 'all') {
+                        setPrimary('Итого', revenueValues.total, 'total');
+                        addSecondary('bots', revenueValues.bots);
+                        addSecondary('manual', revenueValues.manual);
+                        stateText = 'Сейчас показана выручка: все источники, период ' + periodLabel;
+                    } else if (mainTab === 'manual') {
+                        setPrimary('Ручные сделки', revenueValues.manual, 'manual');
+                        addSecondary('total', revenueValues.total);
+                        stateText = 'Сейчас показана выручка: ручные сделки, период ' + periodLabel;
+                    } else if (mainTab === 'bots' && botsSubtab === 'all') {
+                        setPrimary('Боты', revenueValues.bots, 'bots');
+                        addSecondary('chats', revenueValues.chats);
+                        addSecondary('shop', revenueValues.shop);
+                        stateText = 'Сейчас показана выручка: боты, период ' + periodLabel;
+                    } else if (mainTab === 'bots' && botsSubtab === 'chats') {
+                        setPrimary('Боты → Чаты', revenueValues.chats, 'chats');
+                        addSecondary('bots', revenueValues.bots);
+                        addSecondary('shop', revenueValues.shop);
+                        stateText = 'Сейчас показана выручка: боты → чаты, период ' + periodLabel;
+                    } else {
+                        setPrimary('Боты → Магазин', revenueValues.shop, 'shop');
+                        addSecondary('bots', revenueValues.bots);
+                        addSecondary('chats', revenueValues.chats);
+                        stateText = 'Сейчас показана выручка: боты → магазин, период ' + periodLabel;
+                    }
+
+                    document.getElementById('revenue-state-text').textContent = stateText;
+                    document.getElementById('revenue-bots-subtabs').classList.toggle('visible', mainTab === 'bots');
+                }
+
+                document.querySelectorAll('#revenue-main-tabs .revenue-tab').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        mainTab = btn.dataset.tab;
+                        document.querySelectorAll('#revenue-main-tabs .revenue-tab').forEach(function(x) { x.classList.remove('active'); });
+                        btn.classList.add('active');
+                        renderRevenue();
+                    });
+                });
+
+                document.querySelectorAll('#revenue-bots-subtabs .revenue-tab').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        botsSubtab = btn.dataset.subtab;
+                        document.querySelectorAll('#revenue-bots-subtabs .revenue-tab').forEach(function(x) { x.classList.remove('active'); });
+                        btn.classList.add('active');
+                        renderRevenue();
+                    });
+                });
+
+                renderRevenue();
+            }
+        });
+
+        // ===== Copy Link =====
+        function copyLink(inputId) {
+            var input = document.getElementById(inputId);
+            if (!input) return;
+            navigator.clipboard.writeText(input.value).then(function() {
+                var t = document.createElement('div');
+                t.className = 'ref-toast';
+                t.textContent = 'Ссылка скопирована';
+                document.body.appendChild(t);
+                setTimeout(function() { t.remove(); }, 1800);
+            });
+        }
+
+        // ===== Download QR =====
+        function downloadQR(canvasId, filename) {
+            var canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            var link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // ===== Toggle Ref Block =====
+        function toggleRefBlock(refId) {
+            var block = document.getElementById('ref-block-' + refId);
+            if (!block) return;
+            var body = block.querySelector('.ref-code-body');
+            var isOpen = block.classList.contains('open');
+
+            if (isOpen) {
+                body.style.display = 'none';
+                block.classList.remove('open');
+            } else {
+                body.style.display = 'block';
+                block.classList.add('open');
+
+                // Generate QR on first open
+                var tgCanvas = document.getElementById('qr-tg-' + refId);
+                var maxCanvas = document.getElementById('qr-max-' + refId);
+                if (tgCanvas && !tgCanvas.dataset.generated) {
+                    var tgInput = document.getElementById('tg-link-' + refId);
+                    if (tgInput) QRCode.toCanvas(tgCanvas, tgInput.value, { width: 120, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
+                    tgCanvas.dataset.generated = '1';
+                }
+                if (maxCanvas && !maxCanvas.dataset.generated) {
+                    var maxInput = document.getElementById('max-link-' + refId);
+                    if (maxInput) QRCode.toCanvas(maxCanvas, maxInput.value, { width: 120, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } });
+                    maxCanvas.dataset.generated = '1';
+                }
+            }
+        }
+
+        // ===== Toggle Users Panel =====
+        function toggleUsersPanel(refId) {
+            var section = document.getElementById('users-panel-' + refId);
+            if (!section) return;
+            var parent = section.closest('.ref-users-section');
+            parent.classList.toggle('open');
+        }
+
+        // ===== Filter Users by Platform =====
+        function filterUsers(refId, platform, btn) {
+            // Update active button
+            var filterBar = document.getElementById('users-filter-' + refId);
+            filterBar.querySelectorAll('.ref-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+
+            // Show/hide cards
+            var cards = document.querySelectorAll('.ref-user-card[data-ref="' + refId + '"]');
+            cards.forEach(function(card) {
+                if (platform === 'all' || card.dataset.platform === platform) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+        </script>
+    </div><!-- /main-content -->
+</body>
+</html>

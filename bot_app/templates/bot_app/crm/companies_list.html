@@ -1,0 +1,528 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Компании - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd8;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(env(safe-area-inset-left), 0);
+                padding-right: max(env(safe-area-inset-right), 0);
+                padding-bottom: max(env(safe-area-inset-bottom), 0);
+            }
+        }
+        .header {
+            background: var(--color-card-bg);
+            padding: var(--spacing-md) var(--spacing-xl);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding-top: max(env(safe-area-inset-top), var(--spacing-md));
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 600; color: var(--color-text); }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+
+        /* Search */
+        .search-box { position: relative; }
+        .search-box input {
+            padding: 0.7rem 1rem 0.7rem 2.5rem;
+            min-height: var(--touch-target-min);
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            width: 300px;
+            font-size: 16px;
+            transition: all 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .search-box input:focus { outline: none; border-color: var(--color-primary); }
+        .search-box::before { content: '\1F50D'; position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); font-size: 1rem; }
+
+        /* Content */
+        .content { padding: var(--spacing-lg) var(--spacing-xl); }
+
+        /* Table */
+        .table-container {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-md);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+            position: relative;
+        }
+        /* Scroll indicator gradient */
+        .table-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 40px;
+            background: linear-gradient(to right, transparent, var(--color-card-bg));
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .table-container.scrolled::after {
+            opacity: 1;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 750px; }
+        table th {
+            background: var(--color-card-hover);
+            padding: var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-text);
+            border-bottom: 2px solid var(--color-border-light);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        table td { padding: var(--spacing-md); border-bottom: 1px solid var(--color-border-light); vertical-align: middle; }
+        table tr:hover { background: #f8f9fa; }
+        table tr { cursor: pointer; transition: background 0.2s; }
+
+        /* Badges */
+        .badge { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-primary { background: #e3e8ff; color: #667eea; }
+        .badge-success { background: #d4edda; color: #27ae60; }
+        .badge-warning { background: #fff3cd; color: #f39c12; }
+        .badge-secondary { background: #e9ecef; color: #6c757d; }
+        .badge-info { background: #d1ecf1; color: #3498db; }
+
+        /* Company card */
+        .company-name { font-weight: 600; color: #2c3e50; margin-bottom: 0.25rem; }
+        .company-inn { font-size: 0.85rem; color: #7f8c8d; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #95a5a6; }
+        .empty-state .icon { font-size: 4rem; margin-bottom: 1rem; }
+        .empty-state h3 { color: #7f8c8d; margin-bottom: 0.5rem; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.65rem 1.2rem;
+            min-height: var(--touch-target-min);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-primary:hover { background: var(--color-primary-dark); }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-danger:active { transform: scale(0.98); background: #c82333; }
+        .btn-icon { padding: 0.5rem 0.75rem; min-width: auto; }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: var(--spacing-xl);
+            padding: var(--spacing-md) var(--spacing-xl);
+            background: var(--color-card-bg);
+            border-bottom: 1px solid var(--color-border-light);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .stats-bar .stat { display: flex; flex-direction: column; }
+        .stats-bar .stat-value { font-size: 1.5rem; font-weight: 700; color: #667eea; }
+        .stats-bar .stat-label { font-size: 0.8rem; color: #95a5a6; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Mobile responsive */
+        .burger-menu {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--color-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            line-height: 1;
+            min-width: var(--touch-target-min);
+            min-height: var(--touch-target-min);
+        }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; }
+        .sidebar-overlay.active { display: block; }
+        .search-mobile { display: none; }
+
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; }
+        .sidebar-overlay.active { display: block; }
+        .search-mobile { display: none; }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .burger-menu { display: flex; align-items: center; justify-content: center; }
+            .sidebar-nav a { min-height: 48px; }
+            .header { padding: var(--spacing-sm) var(--spacing-md); gap: var(--spacing-sm); }
+            .header h1 { font-size: 1.2rem; }
+            .header-actions { display: none; }
+            .search-mobile { display: block; padding: var(--spacing-sm) var(--spacing-md); background: var(--color-card-bg); border-bottom: 1px solid var(--color-border-light); }
+            .search-mobile input {
+                width: 100%;
+                padding: 0.7rem 1rem;
+                border: 2px solid var(--color-border);
+                border-radius: var(--radius-sm);
+                font-size: 16px;
+                min-height: var(--touch-target-min);
+                -webkit-appearance: none;
+                appearance: none;
+            }
+            .stats-bar .btn { min-height: var(--touch-target-min); display: inline-flex; align-items: center; justify-content: center; }
+            .search-mobile input:focus { outline: none; border-color: var(--color-primary); }
+            .stats-bar { padding: var(--spacing-sm) var(--spacing-md); gap: var(--spacing-md); flex-wrap: wrap; }
+            .stats-bar .stat-value { font-size: 1.2rem; }
+            .content { padding: var(--spacing-sm); }
+            .table-container::after { display: none; }
+            .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { min-width: 600px; }
+            .btn { padding: var(--spacing-sm) var(--spacing-md); font-size: 0.8rem; min-height: var(--touch-target-min); display: inline-flex; align-items: center; justify-content: center; }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+            /* Card view for table on mobile - показываем только ключевые колонки */
+            .table-wrapper { overflow-x: visible; }
+            table { min-width: auto; }
+            .table-container table,
+            .table-container thead,
+            .table-container tbody,
+            .table-container th,
+            .table-container td,
+            .table-container tr { display: block; }
+            .table-container thead { position: absolute; left: -9999px; top: -9999px; }
+            .table-container tr {
+                background: var(--color-card-bg);
+                border: 1px solid var(--color-border);
+                border-radius: var(--radius-sm);
+                margin-bottom: var(--spacing-sm);
+                padding: var(--spacing-sm);
+            }
+            /* Скрываем менее важные колонки на мобильных - показываем только: Название, ИНН, Телефон, Контакты */
+            .table-container td[data-label="ID"],
+            .table-container td[data-label="Email"],
+            .table-container td[data-label="ККТ"],
+            .table-container td[data-label="Добавил"],
+            .table-container td[data-label="Создана"] {
+                display: none;
+            }
+            .table-container td {
+                border: none;
+                padding: var(--spacing-xs) 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.9rem;
+            }
+            .table-container td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: var(--color-text-muted);
+                margin-right: var(--spacing-md);
+                text-transform: uppercase;
+                font-size: 0.75rem;
+            }
+        }
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .header { background: var(--color-card-bg); }
+            .search-box input, .search-mobile input { background: var(--color-card-hover); color: var(--color-text); }
+        }
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn:hover { transform: none; box-shadow: none; }
+            .btn:active { transform: scale(0.98); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='crm_companies' %}
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <h1>Компании</h1>
+            <div class="header-actions">
+                <form method="get" class="search-box">
+                    <input type="text" name="search" placeholder="Поиск по названию, ИНН, телефону..." value="{{ search }}">
+                </form>
+            </div>
+        </div>
+
+        <form method="get" class="search-mobile">
+            <input type="text" name="search" placeholder="Поиск по названию, ИНН, телефону..." value="{{ search }}">
+        </form>
+
+        <div class="stats-bar">
+            <div class="stat">
+                <span class="stat-value">{{ companies|length }}</span>
+                <span class="stat-label">Всего показано</span>
+            </div>
+            <div style="margin-left: auto;">
+                <a href="{% url 'bot_app:crm_company_create' %}" class="btn btn-primary">+ Добавить компанию</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="table-container">
+                <div class="table-wrapper">
+                {% if companies %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Название</th>
+                            <th>ИНН</th>
+                            <th>Телефон</th>
+                            <th>Email</th>
+                            <th>Контакты</th>
+                            <th>ККТ</th>
+                            <th>Добавил</th>
+                            <th>Создана</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in companies %}
+                        <tr onclick="window.location='{% url 'bot_app:crm_company_detail' c.id %}'" id="company-row-{{ c.id }}">
+                            <td data-label="ID">{{ c.id }}</td>
+                            <td data-label="Название"><strong>{{ c.name }}</strong></td>
+                            <td data-label="ИНН">{{ c.inn|default:"-" }}</td>
+                            <td data-label="Телефон">{{ c.phone|default:"-" }}</td>
+                            <td data-label="Email">{{ c.email|default:"-" }}</td>
+                            <td data-label="Контакты"><span class="badge badge-info">{{ c.contacts_count }}</span></td>
+                            <td data-label="ККТ"><span class="badge badge-primary">{{ c.kkt_count }}</span></td>
+                            <td data-label="Добавил">{% if c.added_by_name %}<span class="badge badge-info">{{ c.added_by_name }}</span>{% else %}-{% endif %}</td>
+                            <td data-label="Создана"><span class="badge badge-secondary">{{ c.created_at|ru_date }}</span></td>
+                            <td data-label="Действия" onclick="event.stopPropagation();">
+                                <button class="btn btn-danger btn-icon" onclick="confirmDeleteCompany({{ c.id }}, '{{ c.name }}')" title="Удалить компанию">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="icon">&#x1F3E2;</div>
+                    <h3>Компании не найдены</h3>
+                    <p>Создайте первую компанию, чтобы начать</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Модальное окно подтверждения удаления -->
+    <div id="deleteConfirmModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: var(--color-card-bg); border-radius: var(--radius-md); padding: var(--spacing-lg); max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+            <h3 style="margin-bottom: var(--spacing-md); color: var(--color-text);">Подтверждение удаления</h3>
+            <p style="margin-bottom: var(--spacing-lg); color: var(--color-text-muted);" id="deleteConfirmText"></p>
+            <div style="display: flex; gap: var(--spacing-sm); justify-content: flex-end;">
+                <button class="btn" style="background: var(--color-border); color: var(--color-text);" onclick="closeDeleteModal()">Отмена</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn" onclick="deleteCompany()">Да, удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомление -->
+    <div id="notification" style="display: none; position: fixed; bottom: 20px; right: 20px; background: var(--color-card-bg); padding: var(--spacing-md) var(--spacing-lg); border-radius: var(--radius-sm); box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001; max-width: 350px;">
+        <p id="notificationText" style="margin: 0; color: var(--color-text);"></p>
+    </div>
+    <script>
+    // Переменные для удаления
+    var deleteCompanyId = null;
+    var deleteCompanyName = '';
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('active');
+    }
+    
+    // Scroll indicator for table
+    document.addEventListener('DOMContentLoaded', function() {
+        var tableContainer = document.querySelector('.table-container');
+        var tableWrapper = document.querySelector('.table-wrapper');
+        if (tableWrapper) {
+            tableWrapper.addEventListener('scroll', function() {
+                if (this.scrollLeft > 10) {
+                    tableContainer.classList.add('scrolled');
+                } else {
+                    tableContainer.classList.remove('scrolled');
+                }
+            });
+        }
+    });
+
+    // Подтверждение удаления компании
+    function confirmDeleteCompany(companyId, companyName) {
+        deleteCompanyId = companyId;
+        deleteCompanyName = companyName;
+        document.getElementById('deleteConfirmText').textContent = 'Вы уверены, что хотите удалить компанию "' + companyName + '"? Это действие нельзя отменить.';
+        document.getElementById('deleteConfirmModal').style.display = 'flex';
+    }
+
+    // Закрыть модальное окно
+    function closeDeleteModal() {
+        document.getElementById('deleteConfirmModal').style.display = 'none';
+        deleteCompanyId = null;
+        deleteCompanyName = '';
+    }
+
+    // Удаление компании
+    function deleteCompany() {
+        if (!deleteCompanyId) return;
+
+        var btn = document.getElementById('confirmDeleteBtn');
+        btn.disabled = true;
+        btn.textContent = 'Удаление...';
+
+        fetch('/crm/company/' + deleteCompanyId + '/delete/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({})
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.success) {
+                // Удаляем строку из таблицы
+                var row = document.getElementById('company-row-' + deleteCompanyId);
+                if (row) {
+                    row.style.transition = 'opacity 0.3s, transform 0.3s';
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateX(-20px)';
+                    setTimeout(function() {
+                        row.remove();
+                        // Обновляем счётчик компаний
+                        updateCompaniesCount();
+                    }, 300);
+                }
+                showNotification('Компания "' + deleteCompanyName + '" удалена', 'success');
+            } else {
+                showNotification('Ошибка: ' + (data.error || 'Не удалось удалить компанию'), 'error');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error:', error);
+            showNotification('Ошибка при удалении компании', 'error');
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = 'Да, удалить';
+            closeDeleteModal();
+        });
+    }
+
+    // Показать уведомление
+    function showNotification(message, type) {
+        var notification = document.getElementById('notification');
+        var notificationText = document.getElementById('notificationText');
+        notificationText.textContent = message;
+        
+        if (type === 'success') {
+            notification.style.borderLeft = '4px solid #28a745';
+        } else {
+            notification.style.borderLeft = '4px solid #dc3545';
+        }
+        
+        notification.style.display = 'block';
+        setTimeout(function() {
+            notification.style.display = 'none';
+        }, 3000);
+    }
+
+    // Обновить счётчик компаний
+    function updateCompaniesCount() {
+        var rows = document.querySelectorAll('#company-row-');
+        var countElement = document.querySelector('.stat-value');
+        if (countElement) {
+            countElement.textContent = rows.length;
+        }
+    }
+
+    // Получение CSRF токена
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Закрытие модального окна по клику вне его
+    document.getElementById('deleteConfirmModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeleteModal();
+        }
+    });
+    </script>
+</body>
+</html>

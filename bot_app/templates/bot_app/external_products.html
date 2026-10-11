@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Продукты со ВсеОФД - CRM Бот</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #2c3e50; }
+        .main-content { margin-left: 260px; min-height: 100vh; }
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding-top: max(env(safe-area-inset-top), 1.5rem);
+        }
+        .page-header h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+        .page-header .subtitle { opacity: 0.9; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 2rem; }
+        .section { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem; }
+        .section h2 { font-size: 1.3rem; margin-bottom: 1rem; }
+        .tabs { display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; }
+        .tab-link { padding:0.7rem 1rem; border-radius:8px; text-decoration:none; font-weight:600; background:#eef2ff; color:#4c63d2; }
+        .tab-link.active { background:#667eea; color:white; }
+        .filters { display:flex; gap:1rem; flex-wrap:wrap; align-items:end; }
+        .filters select, .filters button { padding:0.75rem 0.9rem; border-radius:8px; border:1px solid #dfe3eb; font-size:0.95rem; }
+        .filters button { border:none; background:#667eea; color:white; cursor:pointer; font-weight:600; }
+        .filters .secondary { background:#edf2f7; color:#2d3748; }
+        .alert { padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid; }
+        .alert-success { background: #d4edda; border-left-color: #27ae60; color: #155724; }
+        .alert-danger { background: #f8d7da; border-left-color: #e74c3c; color: #721c24; }
+        .alert-info { background: #e7f1ff; border-left-color: #3498db; color: #1f4f82; }
+        .product-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:1rem; }
+        .product-card { border:1px solid #e7ebf3; border-radius:12px; padding:1rem; background:#fcfdff; }
+        .product-head { display:flex; justify-content:space-between; gap:1rem; margin-bottom:0.75rem; }
+        .product-title { font-size:1.05rem; font-weight:700; }
+        .badge { display:inline-block; padding:0.25rem 0.65rem; border-radius:999px; font-size:0.75rem; font-weight:700; background:#eef2ff; color:#4c63d2; }
+        .meta { color:#6b7280; font-size:0.88rem; line-height:1.5; margin-bottom:0.8rem; }
+        .meta strong { color:#2d3748; }
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem; }
+        .form-group label { display:block; font-size:0.82rem; font-weight:700; color:#4a5568; margin-bottom:0.35rem; }
+        .form-group input, .form-group textarea { width:100%; padding:0.7rem 0.8rem; border:1px solid #dfe3eb; border-radius:8px; font-size:0.94rem; font-family:inherit; }
+        .form-group textarea { min-height:84px; resize:vertical; }
+        .checkbox { display:flex; align-items:center; gap:0.5rem; margin-top:0.4rem; }
+        .actions { display:flex; justify-content:space-between; align-items:center; margin-top:0.8rem; gap:1rem; }
+        .hint { font-size:0.8rem; color:#718096; }
+        .btn { padding:0.75rem 1rem; border:none; border-radius:8px; cursor:pointer; font-weight:700; background:#667eea; color:white; }
+        .empty-state { text-align:center; color:#95a5a6; padding:3rem 1rem; }
+        @media (max-width: 768px) {
+            .main-content { margin-left:0; }
+            .page-header { padding: 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+            .page-header h1 { font-size: 1.25rem; margin-bottom: 0; }
+            .page-header .subtitle { display: none; }
+            .container { padding:1rem; }
+            .product-grid { grid-template-columns:1fr; }
+            .form-row { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='external_products' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div>
+                <h1>🧩 Продукты со ВсеОФД</h1>
+                <div class="subtitle">Каталог внешнего сервиса, который директор может настраивать по фиксированной цене или индивидуальной наценке</div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="section">
+                <div class="tabs">
+                    <a class="tab-link" href="{% url 'bot_app:system_settings' %}">Общие настройки</a>
+                    <a class="tab-link{% if active_tab == 'vseofd' %} active{% endif %}" href="{% url 'bot_app:external_products' %}?tab=vseofd">Продукты со ВсеОФД</a>
+                    <a class="tab-link{% if active_tab == 'shop' %} active{% endif %}" href="{% url 'bot_app:external_products' %}?tab=shop">Наш магазин</a>
+                </div>
+                {% if active_tab == 'vseofd' %}
+                <div class="filters">
+                    <form method="get" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:end;">
+                        <input type="hidden" name="tab" value="vseofd">
+                        <div>
+                            <label for="category" style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:0.35rem;color:#4a5568;">Категория</label>
+                            <select id="category" name="category">
+                                {% for value, label in category_choices %}
+                                <option value="{{ value }}"{% if category_filter == value %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit">Применить</button>
+                        <a class="tab-link" href="{% url 'bot_app:external_products' %}?tab=vseofd">Сбросить</a>
+                    </form>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="refresh_catalog">
+                        <input type="hidden" name="tab" value="vseofd">
+                        {% if category_filter %}<input type="hidden" name="category" value="{{ category_filter }}">{% endif %}
+                        <button type="submit" class="secondary">Синхронизировать каталог</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if success %}<div class="alert alert-success">Изменения по товару сохранены.</div>{% endif %}
+            {% if refreshed %}<div class="alert alert-info">Каталог синхронизирован с внешним сервисом.</div>{% endif %}
+            {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+            {% if active_tab == 'vseofd' %}
+            <div class="section">
+                <h2>Товары</h2>
+                <div class="alert alert-info">Если оставить <strong>фиксированную цену</strong> и <strong>индивидуальную наценку</strong> пустыми, будет использована глобальная наценка из общих настроек.</div>
+                {% if rows %}
+                <div class="product-grid">
+                    {% for row in rows %}
+                    <div class="product-card">
+                        <div class="product-head">
+                            <div>
+                                <div class="product-title">{{ row.display_name }}</div>
+                                <div class="meta">{{ row.type_display }}</div>
+                            </div>
+                            <span class="badge">{{ row.category_label }}</span>
+                        </div>
+                        <div class="meta">
+                            <div><strong>Внешнее название:</strong> {{ row.external_name|default:"—" }}</div>
+                            <div><strong>Цена внешнего сервиса:</strong> {{ row.source_price_display }}</div>
+                            <div><strong>Последняя синхронизация:</strong> {% if row.last_seen_at %}{{ row.last_seen_at|date:"d.m.Y H:i" }}{% else %}—{% endif %}</div>
+                        </div>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="tab" value="vseofd">
+                            <input type="hidden" name="product_id" value="{{ row.id }}">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="fixed_{{ row.id }}">Фиксированная цена, ₽</label>
+                                    <input id="fixed_{{ row.id }}" type="number" name="price_fixed" min="0" value="{{ row.price_fixed_display }}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="markup_{{ row.id }}">Индивидуальная наценка, %</label>
+                                    <input id="markup_{{ row.id }}" type="number" name="markup_pct" step="0.01" value="{{ row.markup_pct_display }}">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="comment_{{ row.id }}">Комментарий</label>
+                                <textarea id="comment_{{ row.id }}" name="comment">{{ row.comment|default:"" }}</textarea>
+                            </div>
+                            <label class="checkbox">
+                                <input type="checkbox" name="is_active"{% if row.is_active %} checked{% endif %}>
+                                <span>Товар активен в нашем каталоге</span>
+                            </label>
+                            <div class="actions">
+                                <div class="hint">Технические ID скрыты из интерфейса; директор редактирует только бизнес-параметры.</div>
+                                <button type="submit" class="btn">Сохранить</button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">Пока нет синхронизированных внешних продуктов. Нажмите «Синхронизировать каталог».</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if active_tab == 'shop' %}
+            <div class="section">
+                <h2>Наш магазин — добавить оборудование</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_shop_equipment">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="new_eq_name">Название</label>
+                            <input id="new_eq_name" type="text" name="name" maxlength="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new_eq_category">Категория</label>
+                            <select id="new_eq_category" name="category" required style="width:100%;padding:0.7rem 0.8rem;border:1px solid #dfe3eb;border-radius:8px;font-size:0.94rem;">
+                                <option value="Кассы">Кассы</option>
+                                <option value="Сканер">Сканер</option>
+                                <option value="ФН">ФН</option>
+                                <option value="Кассовые ленты">Кассовые ленты</option>
+                                <option value="Этикетки">Этикетки</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="new_eq_price">Цена, ₽</label>
+                            <input id="new_eq_price" type="number" name="price" min="0" value="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new_eq_count">Количество (пусто = без лимита)</label>
+                            <input id="new_eq_count" type="number" name="count" min="0" value="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="new_eq_image">Имя изображения (опционально)</label>
+                            <input id="new_eq_image" type="text" name="image_name" maxlength="100" value="">
+                        </div>
+                        <div class="form-group" style="display:flex;align-items:flex-end;">
+                            <label class="checkbox" style="margin:0;">
+                                <input type="checkbox" name="is_used">
+                                <span>Б/У оборудование</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <div class="hint">Новая позиция добавляется в таблицу equipment и сразу появится в списке ниже.</div>
+                        <button type="submit" class="btn">Добавить оборудование</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="section">
+                <h2>Наш магазин — оборудование</h2>
+                {% if equipment_rows %}
+                <div class="product-grid">
+                    {% for item in equipment_rows %}
+                    <div class="product-card">
+                        <div class="product-head">
+                            <div>
+                                <div class="product-title">{{ item.name }}</div>
+                                <div class="meta">{{ item.category }}{% if item.is_used %} · Б/У{% endif %}</div>
+                            </div>
+                            <span class="badge">ID {{ item.id }}</span>
+                        </div>
+                        <div class="meta">
+                            <div><strong>Остаток:</strong> {{ item.count|default:"—" }}</div>
+                        </div>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="save_shop_equipment">
+                            <input type="hidden" name="equipment_id" value="{{ item.id }}">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="eq_price_{{ item.id }}">Цена, ₽</label>
+                                    <input id="eq_price_{{ item.id }}" type="number" name="price" min="0" value="{{ item.price|default:0 }}" required>
+                                </div>
+                            </div>
+                            <div class="actions">
+                                <div class="hint">Цена берётся из таблицы equipment.</div>
+                                <button type="submit" class="btn">Сохранить</button>
+                            </div>
+                        </form>
+                        <form method="post" onsubmit="return confirm('Удалить «{{ item.name }}»? Это действие необратимо.');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_shop_equipment">
+                            <input type="hidden" name="equipment_id" value="{{ item.id }}">
+                            <div style="margin-top:0.5rem;text-align:right;">
+                                <button type="submit" class="btn" style="background:#e74c3c;">Удалить</button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">Оборудование не найдено.</div>
+                {% endif %}
+            </div>
+
+            <div class="section">
+                <h2>Наш магазин — коды ОФД</h2>
+                {% if shop_code_rows %}
+                <div class="product-grid">
+                    {% for row in shop_code_rows %}
+                    <div class="product-card">
+                        <div class="product-head">
+                            <div>
+                                <div class="product-title">{{ row.type_label }}</div>
+                                <div class="meta">Кодов в базе: {{ row.codes_count }}</div>
+                            </div>
+                            <span class="badge">{{ row.code_type }}</span>
+                        </div>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="save_shop_code_price">
+                            <input type="hidden" name="code_type" value="{{ row.code_type }}">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="code_price_{{ row.code_type }}">Цена продажи, ₽</label>
+                                    <input id="code_price_{{ row.code_type }}" type="number" name="sell_price" min="0" value="{{ row.sell_price_display }}" required>
+                                </div>
+                            </div>
+                            <div class="actions">
+                                <div class="hint">Применяется для кодов типа {{ row.code_type }}.</div>
+                                <button type="submit" class="btn">Сохранить</button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">Коды типов ofd_platform/ofd_first не найдены.</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

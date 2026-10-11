@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Вход - CRM Бот</title>
+    <style>
+      :root {
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 0.75rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        --spacing-2xl: 3rem;
+        --touch-target-min: 44px;
+        --color-primary: #667eea;
+        --color-primary-dark: #764ba2;
+        --color-text: #2c3e50;
+        --color-text-muted: #7f8c8d;
+        --color-border: #ecf0f1;
+        --color-error-bg: #f8d7da;
+        --color-error-text: #721c24;
+        --color-error-border: #e74c3c;
+        --radius-sm: 8px;
+        --radius-md: 16px;
+        --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+        --shadow-hover: 0 6px 20px rgba(102, 126, 234, 0.4);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+
+      @supports (padding: max(0px)) {
+        body {
+          padding-left: max(env(safe-area-inset-left), var(--spacing-md));
+          padding-right: max(env(safe-area-inset-right), var(--spacing-md));
+          padding-top: max(env(safe-area-inset-top), var(--spacing-md));
+          padding-bottom: max(env(safe-area-inset-bottom), var(--spacing-md));
+        }
+      }
+
+      .login-container {
+        background: white;
+        padding: var(--spacing-2xl);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        width: 100%;
+        max-width: 400px;
+      }
+
+      .login-header {
+        text-align: center;
+        margin-bottom: var(--spacing-xl);
+      }
+
+      .login-header h1 {
+        font-size: 2rem;
+        color: var(--color-text);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .login-header p {
+        color: var(--color-text-muted);
+      }
+
+      .form-group {
+        margin-bottom: var(--spacing-lg);
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: var(--spacing-sm);
+        font-weight: 600;
+        color: var(--color-text);
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: var(--spacing-md);
+        min-height: var(--touch-target-min);
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        font-size: 1rem;
+        transition: border-color 0.3s;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+      }
+
+      .btn {
+        width: 100%;
+        padding: var(--spacing-md);
+        min-height: var(--touch-target-min);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+      }
+
+      .error {
+        background: var(--color-error-bg);
+        color: var(--color-error-text);
+        padding: var(--spacing-md);
+        min-height: var(--touch-target-min);
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--spacing-lg);
+        text-align: center;
+        border-left: 4px solid var(--color-error-border);
+      }
+
+      /* Tablet responsive */
+      @media (max-width: 768px) {
+        .login-container {
+          max-width: 100%;
+          padding: var(--spacing-xl);
+        }
+      }
+
+      /* Mobile responsive */
+      @media (max-width: 480px) {
+        .login-container {
+          padding: var(--spacing-xl) var(--spacing-lg);
+        }
+
+        .login-header h1 {
+          font-size: 1.6rem;
+        }
+
+        .login-header p {
+          font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .btn {
+          font-size: 16px; /* Prevent zoom on iOS */
+        }
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --color-text: #ecf0f1;
+          --color-text-muted: #95a5a6;
+          --color-border: #34495e;
+          --color-error-bg: #3d1f1f;
+          --color-error-text: #ffcccc;
+          --color-error-border: #e74c3c;
+        }
+
+        .login-container {
+          background: #1a1a2e;
+        }
+
+        .login-header h1 {
+          color: var(--color-text);
+        }
+      }
+
+      /* Touch device optimizations */
+      @media (hover: none) and (pointer: coarse) {
+        .btn:hover {
+          transform: none;
+          box-shadow: none;
+        }
+
+        .btn:active {
+          transform: scale(0.98);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="login-header">
+        <h1>CRM Бот</h1>
+        <p>Вход в систему</p>
+      </div>
+
+      {% if error %}
+      <div class="error">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="login">Логин</label>
+          <input
+            type="text"
+            id="login"
+            name="login"
+            required
+            autocomplete="username"
+            placeholder="Введите логин"
+          />
+        </div>
+        <div class="form-group">
+          <label for="password">Пароль</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            autocomplete="current-password"
+            placeholder="Введите пароль"
+          />
+        </div>
+        <button type="submit" class="btn">Войти</button>
+      </form>
+    </div>
+  </body>
+</html>

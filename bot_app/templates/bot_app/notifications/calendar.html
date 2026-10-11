@@ -1,0 +1,446 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Календарь сроков - CRM Бот</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        /* === Специфичные стили для Календаря === */
+        
+        /* Навигация по месяцам */
+        .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; background: white; padding: 1rem 1.5rem; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .calendar-nav h2 { font-size: 1.5rem; }
+        .calendar-nav a { text-decoration: none; padding: 0.6rem 1.2rem; background: #667eea; color: white; border-radius: 8px; font-weight: 600; transition: all 0.3s; }
+        .calendar-nav a:hover { background: #5a6fd6; }
+
+        /* Легенда */
+        .legend { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .legend-dot.ofd { background: #e74c3c; }
+        .legend-dot.fn { background: #3498db; }
+        .legend-dot.marking { background: #9b59b6; }
+        .legend-dot.tspiot { background: #1abc9c; }
+        .legend-dot.ecp { background: #f39c12; }
+
+        /* Календарь */
+        .calendar { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
+        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); background: #667eea; color: white; }
+        .calendar-header div { padding: 1rem; text-align: center; font-weight: 600; }
+        .calendar-body { display: grid; grid-template-columns: repeat(7, 1fr); }
+        .calendar-day { min-height: 120px; border: 1px solid #ecf0f1; padding: 0.5rem; position: relative; }
+        .calendar-day.empty { background: #f8f9fa; }
+        .calendar-day.today { background: #fff9e6; }
+        .calendar-day .day-number { font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; color: #2c3e50; }
+        .calendar-day.today .day-number { color: #f39c12; }
+        .calendar-day.weekend .day-number { color: #e74c3c; }
+
+        /* Сроки в ячейках */
+        .deadline-pill { display: block; padding: 0.2rem 0.4rem; margin-bottom: 0.25rem; border-radius: 4px; font-size: 0.7rem; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: all 0.2s; }
+        .deadline-pill:hover { transform: scale(1.02); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .deadline-pill.ofd { background: #e74c3c; }
+        .deadline-pill.fn { background: #3498db; }
+        .deadline-pill.marking { background: #9b59b6; }
+        .deadline-pill.tspiot { background: #1abc9c; }
+        .deadline-pill.ecp { background: #f39c12; }
+        .deadline-pill.more { background: #7f8c8d; }
+
+        /* Детали дня */
+        .day-details { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        .day-details.active { display: flex; align-items: center; justify-content: center; }
+        .day-details-content { background: white; border-radius: 16px; width: 90%; max-width: 600px; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .day-details-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .day-details-header h3 { margin: 0; }
+        .day-details-close { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; }
+        .day-details-body { padding: 1.5rem; max-height: 60vh; overflow-y: auto; }
+        .deadline-detail { padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid; }
+        .deadline-detail.ofd { border-left-color: #e74c3c; background: #fdf2f2; }
+        .deadline-detail.fn { border-left-color: #3498db; background: #f0f8ff; }
+        .deadline-detail.marking { border-left-color: #9b59b6; background: #f8f0ff; }
+        .deadline-detail.tspiot { border-left-color: #1abc9c; background: #f0fff8; }
+        .deadline-detail.ecp { border-left-color: #f39c12; background: #fff8e6; }
+        .deadline-detail h4 { margin-bottom: 0.5rem; }
+        .deadline-detail p { color: #5a6a7a; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .deadline-detail a { color: #667eea; text-decoration: none; font-weight: 600; }
+        .deadline-detail a:hover { text-decoration: underline; }
+
+        /* Кликабельные ячейки */
+        .calendar-day:not(.empty) { cursor: pointer; transition: background 0.2s; }
+        .calendar-day:not(.empty):hover { background: #f0f4ff; }
+
+        /* Пользовательские события */
+        .event-pill { display: block; padding: 0.2rem 0.4rem; margin-bottom: 0.25rem; border-radius: 4px; font-size: 0.7rem; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Форма добавления события */
+        .event-form { background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-top: 1rem; border: 1px solid #ecf0f1; }
+        .event-form h4 { margin-bottom: 0.75rem; color: #2c3e50; }
+        .event-form label { display: block; font-size: 0.85rem; color: #5a6a7a; margin-bottom: 0.25rem; margin-top: 0.5rem; }
+        .event-form input, .event-form textarea, .event-form select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+        .event-form input:focus, .event-form textarea:focus, .event-form select:focus { outline: none; border-color: #667eea; }
+        .event-form textarea { resize: vertical; min-height: 60px; }
+        .event-form-btns { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+        .btn-sm { padding: 0.5rem 1rem; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-sm.primary { background: #667eea; color: white; }
+        .btn-sm.primary:hover { background: #5a6fd6; }
+        .btn-sm.danger { background: #e74c3c; color: white; }
+        .btn-sm.danger:hover { background: #c0392b; }
+        .btn-sm.secondary { background: #95a5a6; color: white; }
+        .btn-sm.secondary:hover { background: #7f8c8d; }
+
+        /* Список событий в модалке */
+        .user-event { padding: 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; border-left: 4px solid #667eea; background: #f8f9fa; display: flex; justify-content: space-between; align-items: flex-start; }
+        .user-event .event-info { flex: 1; }
+        .user-event .event-info h4 { margin-bottom: 0.25rem; font-size: 0.95rem; }
+        .user-event .event-info p { color: #5a6a7a; font-size: 0.85rem; margin: 0; }
+        .user-event .event-meta { font-size: 0.75rem; color: #95a5a6; margin-top: 0.25rem; }
+        .user-event .event-actions { display: flex; gap: 0.25rem; }
+        .event-action-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem; border-radius: 4px; transition: background 0.2s; }
+        .event-action-btn:hover { background: #ecf0f1; }
+        .section-divider { border: none; border-top: 1px solid #ecf0f1; margin: 1rem 0; }
+
+        /* Мобильная адаптация - специфичная для calendar */
+        @media (max-width: 768px) {
+            .calendar-nav { padding: 0.75rem; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+            .calendar-nav h2 { font-size: 1.2rem; width: 100%; text-align: center; order: -1; }
+            .calendar-nav a { padding: 0.5rem 1rem; font-size: 0.85rem; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+            .legend { padding: 0.75rem; gap: 0.75rem; font-size: 0.8rem; }
+            .calendar-day { min-height: 70px; padding: 0.25rem; }
+            .calendar-day .day-number { font-size: 0.9rem; margin-bottom: 0.25rem; }
+            .deadline-pill { font-size: 0.6rem; padding: 0.15rem 0.3rem; }
+            .calendar-header div { padding: 0.5rem 0.25rem; font-size: 0.75rem; }
+            .day-details-content { width: 96%; max-height: 90vh; }
+            .day-details-header { padding: 1rem; }
+            .day-details-close { min-width: 44px; min-height: 44px; }
+            .day-details-body { padding: 1rem; max-height: 75vh; }
+            .event-form input, .event-form textarea, .event-form select { font-size: 16px; min-height: 44px; }
+            .btn-sm { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+            .event-action-btn { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        }
+        @media (max-width: 480px) {
+            .calendar-day { min-height: 55px; }
+            .deadline-pill { display: none; }
+            .calendar-day:not(.empty)::after { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; background: #667eea; margin: 2px auto; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='notifications_calendar' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div>
+                <h1>📅 Календарь сроков</h1>
+                <span class="subtitle">Отслеживание истекающих сроков по ККТ</span>
+            </div>
+        </div>
+
+    <div class="container">
+        <!-- Навигация по месяцам -->
+        <div class="calendar-nav">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}">← {{ prev_month }}.{{ prev_year }}</a>
+            <h2>{{ month_name }} {{ year }}</h2>
+            <a href="?year={{ next_year }}&month={{ next_month }}">{{ next_month }}.{{ next_year }} →</a>
+        </div>
+
+        <!-- Легенда -->
+        <div class="legend">
+            <div class="legend-item"><span class="legend-dot ofd"></span> ОФД</div>
+            <div class="legend-item"><span class="legend-dot fn"></span> ФН</div>
+            <div class="legend-item"><span class="legend-dot marking"></span> Маркировка</div>
+            <div class="legend-item"><span class="legend-dot tspiot"></span> ТСПИоТ</div>
+            <div class="legend-item"><span class="legend-dot ecp"></span> ЭЦП</div>
+        </div>
+
+        <!-- Календарь -->
+        <div class="calendar">
+            <div class="calendar-header">
+                <div>Пн</div>
+                <div>Вт</div>
+                <div>Ср</div>
+                <div>Чт</div>
+                <div>Пт</div>
+                <div>Сб</div>
+                <div>Вс</div>
+            </div>
+            <div class="calendar-body">
+                {% for week in month_days %}
+                    {% for day in week %}
+                        {% if day == 0 %}
+                            <div class="calendar-day empty"></div>
+                        {% else %}
+                            <div class="calendar-day {% if today.year == year and today.month == month and today.day == day %}today{% endif %} {% if forloop.counter > 5 %}weekend{% endif %}" onclick="showDayDetails({{ day }})">
+                                <div class="day-number">{{ day }}</div>
+                                {% with deadlines=deadlines_by_day|get_item:day %}
+                                    {% if deadlines %}
+                                        {% for dl in deadlines|slice:":3" %}
+                                            <span class="deadline-pill {{ dl.type }}" title="{{ dl.label }}: {{ dl.client_name }}">
+                                                {{ dl.label }}: {{ dl.client_name|truncatechars:15 }}
+                                            </span>
+                                        {% endfor %}
+                                        {% if deadlines|length > 3 %}
+                                            <span class="deadline-pill more">
+                                                +{{ deadlines|length|add:"-3" }} ещё...
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endwith %}
+                                <div id="events-day-{{ day }}" class="day-events-container"></div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно деталей дня -->
+    <div class="day-details" id="dayDetails">
+        <div class="day-details-content">
+            <div class="day-details-header">
+                <h3 id="dayDetailsTitle">Сроки на день</h3>
+                <button class="day-details-close" onclick="closeDayDetails()">×</button>
+            </div>
+            <div class="day-details-body" id="dayDetailsBody">
+            </div>
+        </div>
+    </div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+    <script>
+        function getCsrfToken() {
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? match[1] : '';
+        }
+        const currentYear = {{ year }};
+        const currentMonth = {{ month }};
+        let categories = [];
+        let eventsData = {};
+
+        // Данные сроков (передаём из Django)
+        const deadlinesData = {
+            {% for day, items in deadlines_by_day.items %}
+            {{ day }}: [
+                {% for dl in items %}
+                {
+                    type: "{{ dl.type }}",
+                    label: "{{ dl.label }}",
+                    client_id: {{ dl.client_id }},
+                    client_name: "{{ dl.client_name|escapejs }}",
+                    kkt_slot: "{{ dl.kkt_slot|escapejs }}",
+                    address: "{{ dl.address|escapejs|default:'' }}",
+                    date: "{{ dl.date|date:'d.m.Y' }}"
+                },
+                {% endfor %}
+            ],
+            {% endfor %}
+        };
+
+        // Загрузка категорий и событий
+        function loadCategories() {
+            return fetch('/api/calendar/categories/')
+                .then(r => r.json())
+                .then(data => { categories = data.categories || []; });
+        }
+
+        function loadEvents() {
+            return fetch(`/api/calendar/events/?year=${currentYear}&month=${currentMonth}`)
+                .then(r => r.json())
+                .then(data => {
+                    eventsData = {};
+                    (data.events || []).forEach(ev => {
+                        const day = parseInt(ev.event_date.split('-')[2]);
+                        if (!eventsData[day]) eventsData[day] = [];
+                        eventsData[day].push(ev);
+                    });
+                    renderEventPills();
+                });
+        }
+
+        function renderEventPills() {
+            // Очистить старые пилюли
+            document.querySelectorAll('.day-events-container').forEach(c => c.innerHTML = '');
+            for (const [day, events] of Object.entries(eventsData)) {
+                const container = document.getElementById('events-day-' + day);
+                if (!container) continue;
+                events.slice(0, 2).forEach(ev => {
+                    const pill = document.createElement('span');
+                    pill.className = 'event-pill';
+                    pill.style.background = ev.category_color || '#667eea';
+                    pill.textContent = (ev.event_time ? ev.event_time + ' ' : '') + ev.title;
+                    pill.title = ev.title;
+                    container.appendChild(pill);
+                });
+                if (events.length > 2) {
+                    const more = document.createElement('span');
+                    more.className = 'event-pill';
+                    more.style.background = '#7f8c8d';
+                    more.textContent = `+${events.length - 2} ещё...`;
+                    container.appendChild(more);
+                }
+            }
+        }
+
+        function showDayDetails(day) {
+            const deadlines = deadlinesData[day] || [];
+            const events = eventsData[day] || [];
+            const modal = document.getElementById('dayDetails');
+            const title = document.getElementById('dayDetailsTitle');
+            const body = document.getElementById('dayDetailsBody');
+            const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+
+            title.textContent = `${day}.${currentMonth}.${currentYear}`;
+
+            let html = '';
+
+            // Сроки ККТ
+            if (deadlines.length > 0) {
+                html += '<h4 style="margin-bottom:0.5rem;color:#7f8c8d;font-size:0.85rem;text-transform:uppercase;">Сроки ККТ</h4>';
+                deadlines.forEach(item => {
+                    html += `
+                        <div class="deadline-detail ${item.type}">
+                            <h4>${item.label}</h4>
+                            <p><strong>Клиент:</strong> <a href="/crm/client/${item.client_id}/">${item.client_name}</a></p>
+                            ${item.kkt_slot ? `<p><strong>ККТ:</strong> ${item.kkt_slot}</p>` : ''}
+                            ${item.address ? `<p><strong>Адрес:</strong> ${item.address}</p>` : ''}
+                            <p><strong>Срок:</strong> ${item.date}</p>
+                        </div>
+                    `;
+                });
+            }
+
+            // Разделитель
+            if (deadlines.length > 0 && events.length > 0) {
+                html += '<hr class="section-divider">';
+            }
+
+            // Пользовательские события
+            if (events.length > 0) {
+                html += '<h4 style="margin-bottom:0.5rem;color:#7f8c8d;font-size:0.85rem;text-transform:uppercase;">События</h4>';
+                events.forEach(ev => {
+                    html += `
+                        <div class="user-event" style="border-left-color:${ev.category_color || '#667eea'}">
+                            <div class="event-info">
+                                <h4>${escapeHtml(ev.title)}</h4>
+                                ${ev.description ? `<p>${escapeHtml(ev.description)}</p>` : ''}
+                                <div class="event-meta">
+                                    ${ev.event_time ? '&#128337; ' + ev.event_time + ' &nbsp;' : ''}
+                                    ${ev.category_name ? '<span style="color:' + ev.category_color + '">' + ev.category_name + '</span>' : ''}
+                                    ${ev.client_first_name ? ' &middot; ' + ev.client_first_name + ' ' + (ev.client_last_name||'') : ''}
+                                </div>
+                            </div>
+                            <div class="event-actions">
+                                <button class="event-action-btn" onclick="deleteEvent(${ev.id}, ${day})" title="Удалить">&#128465;</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            if (deadlines.length === 0 && events.length === 0) {
+                html += '<p style="color:#95a5a6;text-align:center;padding:1rem;">Нет сроков и событий на этот день</p>';
+            }
+
+            // Форма добавления события
+            html += `
+                <div class="event-form" id="eventForm">
+                    <h4>Добавить событие</h4>
+                    <label>Название *</label>
+                    <input type="text" id="eventTitle" placeholder="Например: Встреча с клиентом">
+                    <label>Время</label>
+                    <input type="time" id="eventTime">
+                    <label>Категория</label>
+                    <select id="eventCategory">
+                        <option value="">— Без категории —</option>
+                        ${categories.map(c => `<option value="${c.id}">${c.icon || ''} ${c.name}</option>`).join('')}
+                    </select>
+                    <label>Описание</label>
+                    <textarea id="eventDesc" placeholder="Подробности..."></textarea>
+                    <input type="hidden" id="eventDate" value="${dateStr}">
+                    <input type="hidden" id="eventDay" value="${day}">
+                    <div class="event-form-btns">
+                        <button class="btn-sm primary" onclick="saveEvent()">Сохранить</button>
+                    </div>
+                </div>
+            `;
+
+            body.innerHTML = html;
+            modal.classList.add('active');
+        }
+
+        function saveEvent() {
+            const title = document.getElementById('eventTitle').value.trim();
+            const eventDate = document.getElementById('eventDate').value;
+            const eventTime = document.getElementById('eventTime').value || null;
+            const categoryId = document.getElementById('eventCategory').value || null;
+            const description = document.getElementById('eventDesc').value.trim() || null;
+            const day = parseInt(document.getElementById('eventDay').value);
+
+            if (!title) {
+                document.getElementById('eventTitle').style.borderColor = '#e74c3c';
+                return;
+            }
+
+            fetch('/api/calendar/event/save/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({
+                    event_date: eventDate,
+                    event_time: eventTime,
+                    title: title,
+                    description: description,
+                    category_id: categoryId ? parseInt(categoryId) : null
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    loadEvents().then(() => showDayDetails(day));
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(err => alert('Ошибка сети: ' + err.message));
+        }
+
+        function deleteEvent(eventId, day) {
+            if (!confirm('Удалить это событие?')) return;
+
+            fetch(`/api/calendar/event/${eventId}/delete/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    loadEvents().then(() => showDayDetails(day));
+                } else {
+                    alert('Ошибка: ' + (data.error || ''));
+                }
+            });
+        }
+
+        function closeDayDetails() {
+            document.getElementById('dayDetails').classList.remove('active');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Закрытие по клику вне модалки
+        document.getElementById('dayDetails').addEventListener('click', function(e) {
+            if (e.target === this) closeDayDetails();
+        });
+
+        // Загрузка данных при старте
+        Promise.all([loadCategories(), loadEvents()]);
+    </script>
+    </div><!-- /main-content -->
+</body>
+</html>

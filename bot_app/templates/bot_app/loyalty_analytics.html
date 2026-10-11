@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Аналитика лояльности - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    {% include 'bot_app/_mobile_base_styles.html' %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd6;
+            --color-success: #2ecc71;
+            --color-warning: #f39c12;
+            --color-danger: #e74c3c;
+            --color-info: #3498db;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 6px 20px rgba(0,0,0,0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
+            color: white;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding-top: max(env(safe-area-inset-top), var(--spacing-lg));
+        }
+        .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+        .page-header .subtitle { opacity: 0.9; font-size: 0.95rem; }
+        .content-area { width: min(var(--content-max-width), 100%); margin: 0 auto; padding: var(--content-padding-y) var(--content-padding-x); }
+
+        /* Period bar */
+        .period-bar { display: flex; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); flex-wrap: wrap; }
+        .period-bar input[type="month"] {
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border: 2px solid var(--color-border-light);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            color: var(--color-text);
+            background: var(--color-card-bg);
+        }
+        .period-bar input[type="month"]:focus { border-color: var(--color-primary); outline: none; }
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            min-height: var(--touch-target-min);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-primary:hover { background: var(--color-primary-dark); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-success { background: var(--color-success); color: white; }
+        .btn-success:hover { filter: brightness(0.9); }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 0; margin-bottom: 2rem; border-bottom: 2px solid var(--color-border-light); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .tab-btn {
+            padding: var(--spacing-md) var(--spacing-lg);
+            min-height: var(--touch-target-min);
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: -2px;
+            white-space: nowrap;
+        }
+        .tab-btn:hover { color: var(--color-primary); }
+        .tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Cards & grids */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-lg); margin-bottom: 2rem; }
+        .stat-card {
+            background: var(--color-card-bg);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+        .stat-card.primary { border-left-color: var(--color-primary); }
+        .stat-card.success { border-left-color: var(--color-success); }
+        .stat-card.warning { border-left-color: var(--color-warning); }
+        .stat-card.danger { border-left-color: var(--color-danger); }
+        .stat-card.info { border-left-color: var(--color-info); }
+        .stat-card h3 { font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--spacing-sm); font-weight: 600; }
+        .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--color-text); }
+        .stat-card .label { font-size: 0.85rem; color: var(--color-text-muted); }
+
+        /* Charts */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: 2rem; }
+        .chart-card {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            padding: var(--spacing-lg);
+        }
+        .chart-card h3 { font-size: 1.1rem; color: var(--color-text); margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm); border-bottom: 2px solid var(--color-border-light); }
+        .chart-container { position: relative; width: 100%; height: 280px; }
+
+        /* Tables */
+        .section {
+            background: var(--color-card-bg);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 2rem;
+        }
+        .section h2 { font-size: 1.3rem; border-bottom: 2px solid var(--color-border-light); padding-bottom: var(--spacing-sm); margin-bottom: var(--spacing-md); color: var(--color-text); }
+        table { width: 100%; border-collapse: collapse; }
+        table th {
+            background: var(--color-card-hover);
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-text);
+            border-bottom: 2px solid var(--color-border-light);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        table td { padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-border-light); font-size: 0.95rem; }
+        table tr:hover { background: var(--color-card-hover); }
+        table th.sortable { cursor: pointer; user-select: none; }
+        table th.sortable:hover { color: var(--color-primary); }
+        table th.sortable::after { content: ' \2195'; font-size: 0.7rem; opacity: 0.5; }
+
+        /* Badges */
+        .badge { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-bronze { background: #f0e0c8; color: #8B6914; }
+        .badge-silver { background: #e8e8e8; color: #555; }
+        .badge-gold { background: #fff3cd; color: #856404; }
+        .badge-platinum { background: #e3e8ff; color: #667eea; }
+        .badge-none { background: #f0f0f0; color: #999; }
+        .text-credit { color: var(--color-success); font-weight: 600; }
+        .text-debit { color: var(--color-danger); font-weight: 600; }
+        .text-muted { color: var(--color-text-muted); font-size: 0.85rem; }
+        .money { font-family: 'SF Mono', monospace; text-align: right; }
+
+        /* Filters */
+        .filters { display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg); flex-wrap: wrap; align-items: center; }
+        .filters select, .filters input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border: 2px solid var(--color-border-light);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            background: var(--color-card-bg);
+        }
+        .filters select:focus, .filters input:focus { border-color: var(--color-primary); outline: none; }
+        .filters label { font-weight: 600; color: var(--color-text-muted); font-size: 0.85rem; }
+
+        /* Pagination */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: var(--spacing-sm); margin-top: var(--spacing-lg); flex-wrap: wrap; }
+        .pagination button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: var(--touch-target-min);
+            border: 2px solid var(--color-border-light);
+            background: var(--color-card-bg);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .pagination button:hover { border-color: var(--color-primary); color: var(--color-primary); }
+        .pagination button.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+        .pagination button:active { transform: scale(0.98); }
+        .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pagination .page-info { font-size: 0.9rem; color: var(--color-text-muted); }
+
+        .empty-state { text-align: center; padding: 3rem; color: var(--color-text-muted); font-size: 1.1rem; }
+
+        /* Loading */
+        .loading { text-align: center; padding: 2rem; color: var(--color-text-muted); }
+        .loading::after { content: ''; display: inline-block; width: 20px; height: 20px; border: 3px solid var(--color-border-light); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-left: 0.5rem; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .page-header { flex-wrap: wrap; }
+            .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .content-area { padding: var(--content-padding-y) var(--content-padding-x); }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .content-area { padding: var(--content-padding-y) var(--content-padding-x); }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .period-bar input[type="month"],
+            .filters select,
+            .filters input,
+            .pagination button {
+                background: var(--color-card-hover);
+                color: var(--color-text);
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .stat-card:hover {
+                transform: none;
+                box-shadow: var(--shadow-sm);
+            }
+            .btn-primary:hover, .btn-success:hover {
+                filter: none;
+            }
+            .btn-primary:active, .btn-success:active, .pagination button:active {
+                transform: scale(0.98);
+            }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='loyalty_analytics' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <div>
+                <h1>🔍 Аналитика лояльности</h1>
+                <div class="subtitle">Детальный анализ программы лояльности</div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <!-- Period Selector -->
+            <div class="period-bar">
+                <label style="font-weight: 600; color: #7f8c8d; font-size: 0.9rem;">Период:</label>
+                <input type="month" id="periodInput" value="{{ period }}">
+                <button class="btn btn-primary" onclick="changePeriod()">Применить</button>
+                <a href="/api/analytics/export/" class="btn btn-success" style="margin-left: auto; text-decoration: none;">📥 Экспорт CSV</a>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('clients')">👤 По клиентам</button>
+                <button class="tab-btn" onclick="switchTab('operations')">📊 По операциям</button>
+                <button class="tab-btn" onclick="switchTab('referrals')">🤝 Реферальная программа</button>
+                <button class="tab-btn" onclick="switchTab('products')">📦 По продуктам</button>
+            </div>
+
+            <!-- Tab 1: По клиентам -->
+            <div class="tab-content active" id="tab-clients">
+                <div class="stats-grid">
+                    <div class="stat-card primary">
+                        <h3>Всего профилей</h3>
+                        <div class="value">{{ total_profiles }}</div>
+                    </div>
+                    {% for t in tier_distribution %}
+                    <div class="stat-card {% if t.tier == 'gold' %}warning{% elif t.tier == 'platinum' %}info{% elif t.tier == 'silver' %}primary{% else %}success{% endif %}">
+                        <h3>{{ t.tier|default:"none" }}</h3>
+                        <div class="value">{{ t.cnt }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Распределение по уровням</h3>
+                        <div class="chart-container"><canvas id="tierPieChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Топ клиентов по балансу</h3>
+                        <div class="chart-container"><canvas id="topClientsChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <label>Уровень:</label>
+                    <select id="tierFilter" onchange="loadClientsTable()">
+                        <option value="all">Все</option>
+                        {% for tier_name in client_tier_options %}
+                        <option value="{{ tier_name }}">{{ tier_name|title }}</option>
+                        {% endfor %}
+                        <option value="none">Без уровня</option>
+                    </select>
+                    <label>Сортировка:</label>
+                    <select id="sortField" onchange="loadClientsTable()">
+                        <option value="balance">По балансу</option>
+                        <option value="rating">По рейтингу</option>
+                        <option value="name">По имени</option>
+                        <option value="last_activity">По активности</option>
+                    </select>
+                    <select id="sortDir" onchange="loadClientsTable()">
+                        <option value="desc">Убывание</option>
+                        <option value="asc">Возрастание</option>
+                    </select>
+                </div>
+
+                <div class="section">
+                    <h2>Клиенты программы лояльности</h2>
+                    <div id="clientsTableWrap">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                    <div class="pagination" id="clientsPagination"></div>
+                </div>
+            </div>
+
+            <!-- Tab 2: По операциям -->
+            <div class="tab-content" id="tab-operations">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Начисления и списания по дням</h3>
+                        <div class="chart-container"><canvas id="timelineChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Количество операций по дням</h3>
+                        <div class="chart-container"><canvas id="txCountChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Агрегация по типам операций</h2>
+                    {% if operations_by_type %}
+                    <table>
+                        <thead><tr>
+                            <th>Тип операции</th>
+                            <th>Кол-во</th>
+                            <th class="money">Начислено</th>
+                            <th class="money">Списано</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for op in operations_by_type %}
+                        <tr>
+                            <td><a href="/loyalty/journal/?event_type={{ op.event_type }}" style="color: #667eea; text-decoration: none; font-weight: 600;">{{ op.event_type }}</a></td>
+                            <td>{{ op.tx_count }}</td>
+                            <td class="money text-credit">+{{ op.total_credit }}</td>
+                            <td class="money text-debit">-{{ op.total_debit }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">Нет данных за выбранный период</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tab 3: Реферальная программа -->
+            <div class="tab-content" id="tab-referrals">
+                <div class="stats-grid">
+                    <div class="stat-card success">
+                        <h3>Активаций за месяц</h3>
+                        <div class="value">{{ referral_activations }}</div>
+                    </div>
+                    <div class="stat-card info">
+                        <h3>Доп. доход партнёров</h3>
+                        <div class="value">+{{ referral_partner_extra_income|floatformat:0 }} ₽</div>
+                        <div class="label">за приглашённых клиентов</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Топ рефереров</h2>
+                    {% if top_referrers %}
+                    <table>
+                        <thead><tr>
+                            <th>Клиент</th>
+                            <th>ИНН</th>
+                            <th>Рефералов</th>
+                            <th class="money">Бонус (баллов)</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for r in top_referrers %}
+                        <tr>
+                            <td><a href="/crm/client/{{ r.owner_id }}/" style="color: #667eea; text-decoration: none;">{{ r.first_name|default:"" }} {{ r.last_name|default:"" }}</a></td>
+                            <td>{{ r.inn|default:"—" }}</td>
+                            <td><strong>{{ r.ref_count }}</strong></td>
+                            <td class="money text-credit">+{{ r.total_bonus }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">Нет данных о реферальных бонусах за период</div>
+                    {% endif %}
+                </div>
+
+                <div class="section">
+                    <h2>Партнёры: доп. доход на своих приглашённых клиентах</h2>
+                    {% if referral_partner_extra_top %}
+                    <table>
+                        <thead><tr>
+                            <th>Партнёр</th>
+                            <th>Приглашённых клиентов</th>
+                            <th>Оплаченных консультаций</th>
+                            <th class="money">Выручка по своим клиентам</th>
+                            <th class="money">Доп. доход</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for p in referral_partner_extra_top %}
+                        <tr>
+                            <td><strong>{{ p.name }}</strong></td>
+                            <td>{{ p.referred_clients }}</td>
+                            <td>{{ p.paid_count }}</td>
+                            <td class="money">{{ p.referred_revenue|floatformat:0 }} ₽</td>
+                            <td class="money text-credit">+{{ p.extra_income|floatformat:0 }} ₽</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">Нет данных по доп. доходу партнёров за период</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tab 4: По продуктам -->
+            <div class="tab-content" id="tab-products">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Баллы по типам продуктов</h3>
+                        <div class="chart-container"><canvas id="productsChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Количество транзакций по продуктам</h3>
+                        <div class="chart-container"><canvas id="productsTxChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Статистика по продуктам</h2>
+                    {% if products_stats %}
+                    <table>
+                        <thead><tr>
+                            <th>Тип продукта</th>
+                            <th>Транзакций</th>
+                            <th class="money">Всего баллов</th>
+                            <th class="money">Средний чек (баллов)</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for p in products_stats %}
+                        <tr>
+                            <td><strong>{{ p.product_type }}</strong></td>
+                            <td>{{ p.tx_count }}</td>
+                            <td class="money text-credit">{{ p.total_points }}</td>
+                            <td class="money">{{ p.avg_points|floatformat:1 }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">Нет данных о продуктах за период</div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+    <script>
+    // ====== Period ======
+    function changePeriod() {
+        const p = document.getElementById('periodInput').value;
+        if (p) window.location.href = '/loyalty/analytics/?period=' + p;
+    }
+
+    // ====== Tabs ======
+    function switchTab(name) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        event.target.classList.add('active');
+
+        if (name === 'clients' && !clientsLoaded) loadClientsTable();
+    }
+
+    // ====== Chart.js: Tier Pie ======
+    const tierData = JSON.parse('{{ tier_distribution_json|safe }}');
+    const tierLabelsMap = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', none: 'Без уровня' };
+    const tierColors = { bronze: '#cd7f32', silver: '#c0c0c0', gold: '#ffd700', platinum: '#667eea', none: '#bdc3c7' };
+
+    if (tierData.length > 0) {
+        new Chart(document.getElementById('tierPieChart'), {
+            type: 'doughnut',
+            data: {
+                labels: tierData.map(d => tierLabelsMap[d.tier] || d.tier),
+                datasets: [{
+                    data: tierData.map(d => d.cnt),
+                    backgroundColor: tierData.map(d => tierColors[d.tier] || '#bdc3c7'),
+                    borderWidth: 2, borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } },
+                cutout: '55%'
+            }
+        });
+    }
+
+    // ====== Chart.js: Timeline ======
+    const timelineLabels = JSON.parse('{{ timeline_labels|safe }}');
+    const timelineAccrued = JSON.parse('{{ timeline_accrued|safe }}');
+    const timelineSpent = JSON.parse('{{ timeline_spent|safe }}');
+    const timelineCounts = JSON.parse('{{ timeline_counts|safe }}');
+
+    if (timelineLabels.length > 0) {
+        new Chart(document.getElementById('timelineChart'), {
+            type: 'line',
+            data: {
+                labels: timelineLabels,
+                datasets: [
+                    { label: 'Начислено', data: timelineAccrued, borderColor: '#2ecc71', backgroundColor: 'rgba(46,204,113,0.1)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6 },
+                    { label: 'Списано', data: timelineSpent, borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.1)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } } },
+                scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
+            }
+        });
+
+        new Chart(document.getElementById('txCountChart'), {
+            type: 'bar',
+            data: {
+                labels: timelineLabels,
+                datasets: [{ label: 'Операций', data: timelineCounts, backgroundColor: 'rgba(102,126,234,0.6)', borderColor: '#667eea', borderWidth: 1, borderRadius: 4 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
+            }
+        });
+    }
+
+    // ====== Chart.js: Products ======
+    const productsStats = {{ products_stats|safe }};
+
+    if (productsStats && productsStats.length > 0) {
+        const productColors = ['#667eea', '#2ecc71', '#f39c12', '#e74c3c', '#3498db', '#9b59b6', '#1abc9c', '#e67e22'];
+
+        new Chart(document.getElementById('productsChart'), {
+            type: 'doughnut',
+            data: {
+                labels: productsStats.map(p => p.product_type),
+                datasets: [{
+                    data: productsStats.map(p => parseFloat(p.total_points)),
+                    backgroundColor: productColors.slice(0, productsStats.length),
+                    borderWidth: 2, borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } },
+                cutout: '50%'
+            }
+        });
+
+        new Chart(document.getElementById('productsTxChart'), {
+            type: 'bar',
+            data: {
+                labels: productsStats.map(p => p.product_type),
+                datasets: [{
+                    label: 'Транзакций',
+                    data: productsStats.map(p => p.tx_count),
+                    backgroundColor: productColors.slice(0, productsStats.length),
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }
+            }
+        });
+    }
+
+    // ====== Clients Table (AJAX) ======
+    let clientsLoaded = false;
+    let clientsPage = 1;
+
+    function loadClientsTable(page) {
+        clientsPage = page || 1;
+        const tier = document.getElementById('tierFilter').value;
+        const sort = document.getElementById('sortField').value;
+        const dir = document.getElementById('sortDir').value;
+
+        const wrap = document.getElementById('clientsTableWrap');
+        wrap.innerHTML = '<div class="loading">Загрузка...</div>';
+
+        fetch(`/api/analytics/clients/?tier=${tier}&sort=${sort}&dir=${dir}&page=${clientsPage}&per_page=30`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.ok) { wrap.innerHTML = '<div class="empty-state">Ошибка загрузки</div>'; return; }
+                clientsLoaded = true;
+
+                if (data.clients.length === 0) {
+                    wrap.innerHTML = '<div class="empty-state">Нет данных</div>';
+                    document.getElementById('clientsPagination').innerHTML = '';
+                    return;
+                }
+
+                // Top clients chart
+                if (clientsPage === 1) {
+                    const topCtx = document.getElementById('topClientsChart');
+                    if (topCtx && topCtx._chartInstance) topCtx._chartInstance.destroy();
+                    const top10 = data.clients.slice(0, 10);
+                    new Chart(topCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: top10.map(c => (c.first_name || '') + ' ' + (c.last_name || '').charAt(0) + '.'),
+                            datasets: [{ label: 'Баланс', data: top10.map(c => parseFloat(c.available_amount || 0)), backgroundColor: 'rgba(102,126,234,0.7)', borderRadius: 6 }]
+                        },
+                        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+                    });
+                }
+
+                let html = '<table><thead><tr><th>Клиент</th><th>ИНН</th><th>Телефон</th><th>Баланс</th><th>Начислено</th><th>Списано</th><th>Уровень</th><th>Рейтинг</th><th>Заказов</th></tr></thead><tbody>';
+                data.clients.forEach(c => {
+                    const tierClass = 'badge-' + (c.tier || 'none');
+                    html += `<tr>
+                        <td><a href="/crm/client/${c.id}/" style="color:#667eea;text-decoration:none;font-weight:600">${c.first_name||''} ${c.last_name||''}</a></td>
+                        <td>${c.inn||'—'}</td>
+                        <td>${c.phone||'—'}</td>
+                        <td class="money"><strong>${parseFloat(c.available_amount||0).toLocaleString('ru-RU')}</strong></td>
+                        <td class="money text-credit">${parseFloat(c.total_earned||0).toLocaleString('ru-RU')}</td>
+                        <td class="money text-debit">${parseFloat(c.total_spent||0).toLocaleString('ru-RU')}</td>
+                        <td><span class="badge ${tierClass}">${c.tier||'none'}</span></td>
+                        <td>${c.rating||0}</td>
+                        <td>${c.total_orders||0}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                wrap.innerHTML = html;
+
+                // Pagination
+                let pagHtml = '';
+                pagHtml += `<button ${clientsPage<=1?'disabled':''} onclick="loadClientsTable(${clientsPage-1})">&laquo;</button>`;
+                pagHtml += `<span class="page-info">Страница ${data.page} из ${data.pages} (${data.total} записей)</span>`;
+                pagHtml += `<button ${clientsPage>=data.pages?'disabled':''} onclick="loadClientsTable(${clientsPage+1})">&raquo;</button>`;
+                document.getElementById('clientsPagination').innerHTML = pagHtml;
+            })
+            .catch(err => {
+                console.error('Clients load failed:', err);
+                wrap.innerHTML = '<div class="empty-state">Ошибка загрузки данных</div>';
+            });
+    }
+
+    // Load clients table on page load
+    loadClientsTable();
+    </script>
+</body>
+</html>

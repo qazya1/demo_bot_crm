@@ -1,0 +1,506 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Контакты - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-white: #ffffff;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd8;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+        }
+
+        body {
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(env(safe-area-inset-left), 0);
+                padding-right: max(env(safe-area-inset-right), 0);
+                padding-bottom: max(env(safe-area-inset-bottom), 0);
+            }
+        }
+        .header {
+            background: var(--color-card-bg);
+            padding: var(--spacing-md) var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding-top: max(env(safe-area-inset-top), var(--spacing-md));
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 600; color: var(--color-text); }
+        .header-actions { display: flex; gap: var(--spacing-md); align-items: center; }
+
+        /* Search */
+        .search-box { position: relative; }
+        .search-box input {
+            padding: 0.7rem 1rem 0.7rem 2.5rem;
+            min-height: var(--touch-target-min);
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            width: 300px;
+            font-size: 16px;
+            transition: all 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .search-box input:focus { outline: none; border-color: var(--color-primary); }
+        .search-box::before { content: '\1F50D'; position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); font-size: 1rem; }
+
+        /* Content */
+        .content { padding: var(--spacing-lg) var(--spacing-xl); }
+
+        /* Table */
+        .table-container {
+            background: var(--color-card-bg);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            position: relative;
+        }
+        /* Scroll indicator gradient */
+        .table-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 40px;
+            background: linear-gradient(to right, transparent, var(--color-card-bg));
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .table-container.scrolled::after {
+            opacity: 1;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        table th {
+            background: var(--color-card-hover);
+            padding: var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-text);
+            border-bottom: 2px solid var(--color-border-light);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        table td { padding: var(--spacing-md); border-bottom: 1px solid var(--color-border-light); vertical-align: middle; }
+        table tr:hover { background: var(--color-card-hover); }
+        table tr { cursor: pointer; transition: background 0.2s; }
+
+        /* Badges */
+        .badge { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-primary { background: #e3e8ff; color: #667eea; }
+        .badge-success { background: #d4edda; color: #27ae60; }
+        .badge-warning { background: #fff3cd; color: #f39c12; }
+        .badge-secondary { background: #e9ecef; color: #6c757d; }
+        .badge-info { background: #d7eefc; color: #1f5f86; }
+        .badge-partner { background: #ede9fe; color: #5b21b6; }
+        .badge-bronze { background: #f0e0c8; color: #8B6914; }
+        .badge-silver { background: #e8e8e8; color: #555; }
+        .badge-gold { background: #fff3cd; color: #856404; }
+        .badge-platinum { background: #e3e8ff; color: #667eea; }
+        .badge-none { background: #f0f0f0; color: #999; }
+
+        /* Client card mini */
+        .client-name { font-weight: 600; color: #2c3e50; margin-bottom: 0.25rem; }
+        .client-inn { font-size: 0.85rem; color: #7f8c8d; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #95a5a6; }
+        .empty-state .icon { font-size: 4rem; margin-bottom: 1rem; }
+        .empty-state h3 { color: #7f8c8d; margin-bottom: 0.5rem; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.65rem 1.2rem;
+            min-height: var(--touch-target-min);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-primary:hover { background: var(--color-primary-dark); }
+        .btn:active { transform: scale(0.98); }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: var(--spacing-xl);
+            padding: var(--spacing-md) var(--spacing-xl);
+            background: var(--color-card-bg);
+            border-bottom: 1px solid var(--color-border-light);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .stats-bar .stat { display: flex; flex-direction: column; }
+        .stats-bar .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--color-primary); }
+        .stats-bar .stat-label { font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Pagination */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 0.5rem; padding: var(--spacing-lg); flex-wrap: wrap; }
+        .pagination a, .pagination span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
+            padding: 0 0.5rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .pagination a { background: var(--color-card-bg); color: var(--color-text); border: 1px solid var(--color-border); cursor: pointer; }
+        .pagination a:hover { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+        .pagination .current { background: var(--color-primary); color: white; font-weight: 600; }
+        .pagination .disabled { color: var(--color-text-muted); pointer-events: none; border-color: #eee; }
+        .pagination .dots { border: none; background: none; color: var(--color-text-muted); }
+
+        /* Mobile responsive */
+        .burger-menu {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--color-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            line-height: 1;
+            min-width: var(--touch-target-min);
+            min-height: var(--touch-target-min);
+        }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; }
+        .sidebar-overlay.active { display: block; }
+        .search-mobile { display: none; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .burger-menu { display: flex; align-items: center; justify-content: center; }
+            .sidebar-nav a { min-height: 48px; }
+            .header { padding: var(--spacing-sm) var(--spacing-md); gap: var(--spacing-sm); }
+            .header h1 { font-size: 1.2rem; }
+            .header-actions { display: none; }
+            .search-mobile { display: block; padding: var(--spacing-sm) var(--spacing-md); background: var(--color-card-bg); border-bottom: 1px solid var(--color-border-light); }
+            .search-mobile input {
+                width: 100%;
+                padding: 0.7rem 1rem;
+                border: 2px solid var(--color-border);
+                border-radius: var(--radius-sm);
+                font-size: 16px;
+                min-height: var(--touch-target-min);
+                -webkit-appearance: none;
+                appearance: none;
+            }
+            .stats-bar .btn { min-height: var(--touch-target-min); display: inline-flex; align-items: center; justify-content: center; }
+            .search-mobile input:focus { outline: none; border-color: var(--color-primary); }
+            .stats-bar { padding: var(--spacing-sm) var(--spacing-md); gap: var(--spacing-md); }
+            .stats-bar .stat-value { font-size: 1.2rem; }
+            .content { padding: var(--spacing-sm); }
+            .table-container::after { display: none; }
+            .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { min-width: 700px; }
+            .btn { padding: var(--spacing-sm) var(--spacing-md); font-size: 0.8rem; }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+
+            /* Card view for table on mobile - показываем только ключевые колонки */
+            .table-wrapper { overflow-x: visible; }
+            table { min-width: auto; }
+            .table-container table,
+            .table-container thead,
+            .table-container tbody,
+            .table-container th,
+            .table-container td,
+            .table-container tr {
+                display: block;
+            }
+            .table-container thead {
+                position: absolute;
+                left: -9999px;
+                top: -9999px;
+            }
+            .table-container tr {
+                background: var(--color-card-bg);
+                border: 1px solid var(--color-border);
+                border-radius: var(--radius-sm);
+                margin-bottom: var(--spacing-sm);
+                padding: var(--spacing-sm);
+            }
+            /* Скрываем менее важные колонки на мобильных - показываем только: Источник, ФИО, Телефон, Баллы, Уровень */
+            .table-container td[data-label="ID"],
+            .table-container td[data-label="ИНН"],
+            .table-container td[data-label="Компания"],
+            .table-container td[data-label="Email"],
+            .table-container td[data-label="Город"],
+            .table-container td[data-label="Верифицирован"],
+            .table-container td[data-label="Добавил"],
+            .table-container td[data-label="Создан"] {
+                display: none;
+            }
+            .table-container td {
+                border: none;
+                padding: var(--spacing-xs) 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.9rem;
+            }
+            .table-container td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: var(--color-text-muted);
+                margin-right: var(--spacing-md);
+                text-transform: uppercase;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .header { background: var(--color-card-bg); }
+            .search-box input,
+            .search-mobile input {
+                background: var(--color-card-hover);
+                color: var(--color-text);
+            }
+            .pagination a {
+                background: var(--color-card-bg);
+                color: var(--color-text);
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn:hover {
+                transform: none;
+                box-shadow: none;
+            }
+            .btn:active {
+                transform: scale(0.98);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    {% include 'bot_app/_sidebar.html' with active_page='crm_clients' %}
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <h1>Контакты</h1>
+            <div class="header-actions">
+                <form method="get" class="search-box">
+                    <input type="text" name="search" placeholder="Поиск по ИНН, имени, телефону..." value="{{ search }}">
+                </form>
+            </div>
+        </div>
+
+        <form method="get" class="search-mobile">
+            <input type="text" name="search" placeholder="Поиск по ИНН, имени, телефону..." value="{{ search }}">
+        </form>
+
+        <div class="stats-bar">
+            <div class="stat">
+                <span class="stat-value">{{ total_clients_count }}</span>
+                <span class="stat-label">Всего в базе</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ filtered_count }}</span>
+                <span class="stat-label">Показано (стр. {{ page }} из {{ total_pages }})</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ activated_clients_count }}</span>
+                <span class="stat-label">Активировались в боте</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ verified_clients_count }}</span>
+                <span class="stat-label">Верифицированы (ИНН + телефон)</span>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: auto;">
+                {% if user.has_crm_access %}
+                <a href="?source=" class="btn {% if not source_filter %}btn-primary{% endif %}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Все</a>
+                <a href="?source=telegram" class="btn {% if source_filter == 'telegram' %}btn-primary{% endif %}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">TG</a>
+                <a href="?source=max" class="btn {% if source_filter == 'max' %}btn-primary{% endif %}" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Max</a>
+                {% endif %}
+                <a href="{% url 'bot_app:crm_client_create' %}" class="btn btn-primary">+ Добавить клиента</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="table-container">
+                <div class="table-wrapper">
+                {% if clients %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Источник</th>
+                            <th>ИНН</th>
+                            <th>Компания</th>
+                            <th>ФИО</th>
+                            <th>Телефон</th>
+                            <th>Email</th>
+                            <th>Город</th>
+                            <th>Баллы</th>
+                            <th>Уровень</th>
+                            <th>Верифицирован</th>
+                            <th>Добавил</th>
+                            <th>Создан</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in clients %}
+                        <tr onclick="window.location='{% url 'bot_app:crm_client_detail' c.id %}'" style="cursor: pointer;">
+                            <td data-label="ID">{{ c.id }}</td>
+                            <td data-label="Источник">{% if c.tg_user_id and c.max_user_id %}<span class="badge badge-primary">TG+Max</span>{% elif c.tg_user_id %}<span class="badge badge-primary">TG</span>{% elif c.max_user_id %}<span class="badge badge-warning">Max</span>{% else %}<span class="badge badge-secondary">CRM</span>{% endif %}</td>
+                            <td data-label="ИНН"><strong>{{ c.inn|default:"-" }}</strong></td>
+                            <td data-label="Компания">{{ c.org_name|default:"-" }}</td>
+                            <td data-label="ФИО">{{ c.first_name|default:"" }} {{ c.last_name|default:"" }}</td>
+                            <td data-label="Телефон">{{ c.phone|default:"-" }}</td>
+                            <td data-label="Email">{{ c.email|default:"-" }}</td>
+                            <td data-label="Город">{{ c.city|default:"-" }}</td>
+                            <td data-label="Баллы">{% if c.loyalty_balance %}<strong style="color: #27ae60;">{{ c.loyalty_balance|floatformat:0 }}</strong>{% else %}<span style="color: #bbb;">0</span>{% endif %}</td>
+                            <td data-label="Уровень">{% if c.loyalty_tier %}<span class="badge badge-{{ c.loyalty_tier }}">{{ c.loyalty_tier }}</span>{% else %}<span style="color: #bbb;">—</span>{% endif %}</td>
+                            <td data-label="Верифицирован">
+                                {% if c.is_verified %}
+                                <span class="badge badge-success">Да</span>
+                                {% else %}
+                                <span class="badge badge-secondary">Нет</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Добавил">{% if c.added_by_partner_id or c.source_partner_id %}<span class="badge badge-partner">{{ c.added_by_display|default:"—" }}</span>{% else %}<span class="badge badge-info">{{ c.added_by_display|default:"—" }}</span>{% endif %}</td>
+                            <td data-label="Создан"><span class="badge badge-secondary">{{ c.created_at|ru_date }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="icon">🔍</div>
+                    <h3>Клиенты не найдены</h3>
+                    <p>Попробуйте изменить параметры поиска</p>
+                </div>
+                {% endif %}
+                </div>
+            </div>
+
+            {% if total_pages > 1 %}
+            <div class="pagination">
+                {% if page > 1 %}
+                <a href="?page={{ page|add:"-1" }}{% if search %}&search={{ search }}{% endif %}{% if source_filter %}&source={{ source_filter }}{% endif %}">&#8592;</a>
+                {% else %}
+                <span class="disabled">&#8592;</span>
+                {% endif %}
+
+                {% if page > 3 %}
+                <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if source_filter %}&source={{ source_filter }}{% endif %}">1</a>
+                {% if page > 4 %}<span class="dots">...</span>{% endif %}
+                {% endif %}
+
+                {% for p in page_range %}
+                {% if p == page %}
+                <span class="current">{{ p }}</span>
+                {% else %}
+                <a href="?page={{ p }}{% if search %}&search={{ search }}{% endif %}{% if source_filter %}&source={{ source_filter }}{% endif %}">{{ p }}</a>
+                {% endif %}
+                {% endfor %}
+
+                {% if page < total_pages|add:"-2" %}
+                {% if page < total_pages|add:"-3" %}<span class="dots">...</span>{% endif %}
+                <a href="?page={{ total_pages }}{% if search %}&search={{ search }}{% endif %}{% if source_filter %}&source={{ source_filter }}{% endif %}">{{ total_pages }}</a>
+                {% endif %}
+
+                {% if page < total_pages %}
+                <a href="?page={{ page|add:"1" }}{% if search %}&search={{ search }}{% endif %}{% if source_filter %}&source={{ source_filter }}{% endif %}">&#8594;</a>
+                {% else %}
+                <span class="disabled">&#8594;</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('active');
+    }
+    
+    // Scroll indicator for table
+    document.addEventListener('DOMContentLoaded', function() {
+        var tableContainer = document.querySelector('.table-container');
+        var tableWrapper = document.querySelector('.table-wrapper');
+        if (tableWrapper) {
+            tableWrapper.addEventListener('scroll', function() {
+                if (this.scrollLeft > 10) {
+                    tableContainer.classList.add('scrolled');
+                } else {
+                    tableContainer.classList.remove('scrolled');
+                }
+            });
+        }
+    });
+    </script>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

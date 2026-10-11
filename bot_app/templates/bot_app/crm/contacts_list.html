@@ -1,0 +1,201 @@
+{% load ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacts - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #2c3e50; }
+        .header { background: white; padding: 1.25rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+        .header h1 { font-size: 1.5rem; font-weight: 600; color: #2c3e50; }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+
+        /* Search */
+        .search-box { position: relative; }
+        .search-box input { padding: 0.7rem 1rem 0.7rem 2.5rem; border: 2px solid #e0e0e0; border-radius: 8px; width: 300px; font-size: 16px; min-height: 44px; transition: all 0.2s; }
+        .search-box input:focus { outline: none; border-color: #667eea; }
+
+        /* Content */
+        .content { padding: 1.5rem 2rem; }
+
+        /* Table */
+        .table-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        table th { background: #f8f9fa; padding: 1rem; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #ecf0f1; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        table td { padding: 1rem; border-bottom: 1px solid #ecf0f1; vertical-align: middle; }
+        table tr:hover { background: #f8f9fa; }
+
+        /* Badges */
+        .badge { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-primary { background: #e3e8ff; color: #667eea; }
+        .badge-success { background: #d4edda; color: #27ae60; }
+        .badge-warning { background: #fff3cd; color: #f39c12; }
+        .badge-secondary { background: #e9ecef; color: #6c757d; }
+        .badge-info { background: #d1ecf1; color: #3498db; }
+
+        /* User card */
+        .user-card { display: flex; align-items: center; gap: 0.75rem; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1rem; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; color: #2c3e50; }
+        .user-id { font-size: 0.8rem; color: #95a5a6; }
+
+        /* Contact info */
+        .contact-info { display: flex; flex-direction: column; gap: 0.2rem; }
+        .contact-info span { font-size: 0.9rem; color: #2c3e50; }
+        .contact-info small { font-size: 0.8rem; color: #95a5a6; }
+        .contact-info a { color: #3498db; text-decoration: none; }
+        .contact-info a:hover { text-decoration: underline; }
+
+        /* Company link */
+        .company-link { display: flex; flex-direction: column; }
+        .company-name { font-weight: 500; color: #667eea; }
+        .company-inn { font-size: 0.8rem; color: #95a5a6; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #95a5a6; }
+        .empty-state .icon { font-size: 4rem; margin-bottom: 1rem; }
+        .empty-state h3 { color: #7f8c8d; margin-bottom: 0.5rem; }
+
+        /* Stats bar */
+        .stats-bar { display: flex; gap: 2rem; padding: 1rem 2rem; background: white; border-bottom: 1px solid #ecf0f1; }
+        .stats-bar .stat { display: flex; flex-direction: column; }
+        .stats-bar .stat-value { font-size: 1.5rem; font-weight: 700; color: #667eea; }
+        .stats-bar .stat-label { font-size: 0.8rem; color: #95a5a6; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Mobile responsive */
+        .burger-menu { display: none; background: none; border: none; color: #2c3e50; font-size: 1.5rem; cursor: pointer; padding: 0.5rem; line-height: 1; }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; }
+        .sidebar-overlay.active { display: block; }
+        .search-mobile { display: none; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .burger-menu { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+            .sidebar-nav a { min-height: 48px; }
+            .header { padding: 0.75rem 1rem; gap: 0.5rem; }
+            .header h1 { font-size: 1.2rem; }
+            .header-actions { display: none; }
+            .search-mobile { display: block; padding: 0.75rem 1rem; background: white; border-bottom: 1px solid #ecf0f1; }
+            .search-mobile input { width: 100%; padding: 0.7rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; min-height: 44px; }
+            .stats-bar .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+            .search-mobile input:focus { outline: none; border-color: #667eea; }
+            .stats-bar { padding: 0.75rem 1rem; gap: 1rem; }
+            .stats-bar .stat-value { font-size: 1.2rem; }
+            .content { padding: 0.75rem; }
+            .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { min-width: 700px; }
+            * { -webkit-tap-highlight-color: rgba(102, 126, 234, 0.15); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='crm_clients' %}
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <h1>Contacts (Bot Users)</h1>
+            <div class="header-actions">
+                <form method="get" class="search-box">
+                    <input type="text" name="search" placeholder="Search by name, phone, INN..." value="{{ search }}">
+                </form>
+            </div>
+        </div>
+
+        <form method="get" class="search-mobile">
+            <input type="text" name="search" placeholder="Search by name, phone, INN..." value="{{ search }}">
+        </form>
+
+        <div class="stats-bar">
+            <div class="stat">
+                <span class="stat-value">{{ contacts|length }}</span>
+                <span class="stat-label">Total Shown</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="table-container">
+                {% if contacts %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Telegram</th>
+                            <th>Contact</th>
+                            <th>Organization</th>
+                            <th>Linked Company</th>
+                            <th>Verified</th>
+                            <th>Registered</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in contacts %}
+                        <tr>
+                            <td>
+                                <div class="user-card">
+                                    <div class="user-avatar">{{ c.first_name|slice:":1"|default:"?" }}</div>
+                                    <div class="user-info">
+                                        <span class="user-name">{{ c.first_name|default:"" }} {{ c.last_name|default:"" }}</span>
+                                        <span class="user-id">ID: {{ c.id }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if c.tg_username %}
+                                <a href="https://t.me/{{ c.tg_username }}" target="_blank" class="badge badge-info">@{{ c.tg_username }}</a>
+                                {% else %}
+                                <span class="badge badge-secondary">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <span>{{ c.phone|default:"-" }}</span>
+                                    <small>{{ c.email|default:"" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <span>{{ c.org_name|default:"-" }}</span>
+                                    {% if c.inn %}<small>INN: {{ c.inn }}</small>{% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{% url 'bot_app:crm_client_detail' c.id %}" class="company-link">
+                                    <span class="company-name">Открыть карточку</span>
+                                    <span class="company-inn">ID: {{ c.id }}</span>
+                                </a>
+                            </td>
+                            <td>
+                                {% if c.is_verified %}
+                                <span class="badge badge-success">Да</span>
+                                {% else %}
+                                <span class="badge badge-warning">Нет</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-secondary">{{ c.created_at|ru_date }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <div class="icon">&#128269;</div>
+                    <h3>No contacts found</h3>
+                    <p>Try changing your search criteria</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

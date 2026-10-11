@@ -1,0 +1,96 @@
+{# Единый JavaScript для боковой навигации CRM. Подключать в конце <body> шаблонов #}
+
+<script>
+// Функция переключения бокового меню
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (!sidebar || !overlay) return;
+    
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    
+    // Блокируем скролл основной страницы при открытом меню
+    if (sidebar.classList.contains('open')) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
+}
+
+// Закрытие меню по Esc
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar && sidebar.classList.contains('open')) {
+            toggleSidebar();
+        }
+    }
+});
+
+// Обновление бейджа уведомлений в реальном времени (если есть)
+function updateNotificationBadge(count) {
+    const badge = document.getElementById('notifBadge');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// Плавный скролл до активной ссылки при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    const activeLink = document.querySelector('.sidebar-nav a.active');
+    const sidebar = document.getElementById('sidebar');
+    
+    if (activeLink && sidebar) {
+        const sidebarNav = sidebar.querySelector('.sidebar-nav');
+        if (sidebarNav) {
+            const linkTop = activeLink.offsetTop;
+            const navHeight = sidebarNav.clientHeight;
+            
+            // Если активная ссылка не видна - скроллим к ней
+            if (linkTop > navHeight) {
+                sidebarNav.scrollTo({
+                    top: linkTop - navHeight / 2,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }
+    
+    // Обработка свайпов для мобильной версии
+    let touchStartX = 0;
+    let touchEndX = 0;
+    
+    document.addEventListener('touchstart', function(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function(e) {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }, { passive: true });
+    
+    function handleSwipe() {
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
+        
+        // Свайп вправо - открыть меню (с левого края экрана)
+        if (touchStartX < 30 && touchEndX - touchStartX > 50) {
+            if (!sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
+        }
+        
+        // Свайп влево - закрыть меню
+        if (touchEndX - touchStartX < -50 && sidebar.classList.contains('open')) {
+            toggleSidebar();
+        }
+    }
+});
+</script>

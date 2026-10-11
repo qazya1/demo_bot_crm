@@ -1,0 +1,402 @@
+{# === Единые базовые стили layout для CRM === #}
+{# Подключать в <head> после _sidebar_styles.html #}
+{# Этот файл определяет общую структуру: sidebar + content + header #}
+
+<style>
+/* ==================== БАЗОВЫЕ СТИЛИ ==================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f7fa;
+    color: #2c3e50;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+:root {
+    --content-max-width: 1680px;
+    --content-padding-x: clamp(1rem, 2.2vw, 2.5rem);
+    --content-padding-y: clamp(1rem, 2vw, 2rem);
+}
+
+/* ==================== LAYOUT ==================== */
+/* Главный контейнер контента - отступ справа от sidebar */
+.main-content {
+    margin-left: 260px;
+    min-height: 100vh;
+    width: calc(100% - 260px);
+    background: #f5f7fa;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==================== PAGE HEADER ==================== */
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.35rem var(--content-padding-x);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.page-header .subtitle {
+    opacity: 0.9;
+    font-size: 0.95rem;
+    display: block;
+    margin-top: 0.25rem;
+}
+
+/* ==================== КОНТЕЙНЕР ==================== */
+.container,
+.content-wrapper {
+    width: min(var(--content-max-width), 100%);
+    margin: 0 auto;
+    padding: var(--content-padding-y) var(--content-padding-x);
+    flex: 1;
+}
+
+/* ==================== КАРТОЧКИ / СЕКЦИИ ==================== */
+.section {
+    background: white;
+    padding: clamp(1rem, 1.8vw, 2rem);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: #2c3e50;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 0.75rem;
+}
+
+/* ==================== ТАБЛИЦЫ ==================== */
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+table td {
+    padding: 1rem;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+table tr:hover {
+    background: #f8f9fa;
+}
+
+/* ==================== БЕЙДЖИ ==================== */
+.badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.badge-primary { background: #e3e8ff; color: #667eea; }
+.badge-success { background: #d4edda; color: #27ae60; }
+.badge-warning { background: #fff3cd; color: #f39c12; }
+.badge-danger { background: #f8d7da; color: #c0392b; }
+.badge-info { background: #d1ecf1; color: #3498db; }
+.badge-secondary { background: #e9ecef; color: #6c757d; }
+.badge-active { background: #d4edda; color: #155724; }
+.badge-inactive { background: #f8d7da; color: #721c24; }
+
+/* ==================== КНОПКИ ==================== */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary { background: #667eea; color: white; }
+.btn-primary:hover { background: #5a6fd6; }
+
+.btn-success { background: #2ecc71; color: white; }
+.btn-success:hover { background: #27ae60; }
+
+.btn-danger { background: #e74c3c; color: white; }
+.btn-danger:hover { background: #c0392b; }
+
+.btn-secondary { background: #95a5a6; color: white; }
+.btn-secondary:hover { background: #7f8c8d; }
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+/* ==================== ALERTS ==================== */
+.alert {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border-left: 4px solid;
+}
+
+.alert-success { background: #d4edda; border-left-color: #27ae60; color: #155724; }
+.alert-warning { background: #fff3cd; border-left-color: #f39c12; color: #856404; }
+.alert-danger { background: #f8d7da; border-left-color: #e74c3c; color: #721c24; }
+.alert-info { background: #d1ecf1; border-left-color: #3498db; color: #0c5460; }
+
+/* ==================== СТАТИСТИКА КАРТОЧКИ ==================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s;
+    border-left: 4px solid transparent;
+    cursor: pointer;
+    position: relative;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.stat-card.no-click {
+    cursor: default;
+}
+
+.stat-card.no-click::after {
+    display: none;
+}
+
+.stat-card.primary { border-left-color: #667eea; }
+.stat-card.success { border-left-color: #2ecc71; }
+.stat-card.warning { border-left-color: #f39c12; }
+.stat-card.danger { border-left-color: #e74c3c; }
+.stat-card.info { border-left-color: #3498db; }
+
+.stat-card h3 {
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.stat-card .value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card .label {
+    font-size: 0.9rem;
+    color: #95a5a6;
+}
+
+/* ==================== СЕТКИ ==================== */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+/* ==================== EMPTY STATE ==================== */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #95a5a6;
+}
+
+/* ==================== МОБИЛЬНАЯ ВЕРСИЯ ==================== */
+@media (max-width: 768px) {
+    :root {
+        --content-padding-x: 1rem;
+        --content-padding-y: 1rem;
+    }
+
+    /* Sidebar сдвигается, контент на всю ширину */
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    /* Page header адаптируется */
+    .page-header {
+        padding: 1rem var(--content-padding-x);
+    }
+
+    .page-header h1 {
+        font-size: 1.25rem;
+    }
+
+    .page-header .subtitle {
+        display: none;
+    }
+
+    /* Контейнер - меньшие отступы */
+    .container,
+    .content-wrapper {
+        padding: var(--content-padding-y) var(--content-padding-x);
+    }
+
+    /* Секции - меньшие padding */
+    .section {
+        padding: 1rem;
+    }
+
+    .section h2 {
+        font-size: 1.2rem;
+    }
+
+    /* Сетка статистики - 2 колонки */
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+        min-height: 48px;
+    }
+
+    .stat-card .value {
+        font-size: 1.6rem;
+    }
+
+    .stat-card::after {
+        display: none;
+    }
+
+    .stat-card h3 {
+        font-size: 0.75rem;
+    }
+
+    /* Двухколоночная сетка - 1 колонка */
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    /* Таблицы - горизонтальный скролл */
+    table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+
+    thead, tbody {
+        display: table;
+        width: 100%;
+        min-width: 600px;
+    }
+
+    /* Кнопки - touch-friendly */
+    .btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-sm {
+        min-height: 36px;
+        padding: 0.5rem 1rem;
+    }
+
+    /* Alerts - адаптированы */
+    .alert {
+        padding: 0.75rem;
+    }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+}
+
+/* Тёмная тема (системная) */
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #1a202c;
+        color: #e2e8f0;
+    }
+
+    .main-content {
+        background: #1a202c;
+    }
+
+    .section {
+        background: #2d3748;
+    }
+
+    .section h2 {
+        color: #e2e8f0;
+    }
+
+    table th {
+        background: #4a5568;
+        color: #e2e8f0;
+    }
+
+    table td {
+        border-bottom-color: #4a5568;
+    }
+
+    table tr:hover {
+        background: #4a5568;
+    }
+
+    .stat-card {
+        background: #2d3748;
+    }
+
+    .stat-card .value {
+        color: #e2e8f0;
+    }
+}
+</style>

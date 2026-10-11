@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Управление специалистами - CRM Бот</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_mobile_base_styles.html' %}
+    <style>
+        :root {
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --touch-target-min: 44px;
+            --color-bg: #f5f7fa;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-card-bg: #ffffff;
+            --color-card-hover: #f8f9fa;
+            --color-border: #e0e0e0;
+            --color-border-light: #ecf0f1;
+            --color-primary: #667eea;
+            --color-primary-dark: #5a6fd6;
+            --color-success: #2ecc71;
+            --color-danger: #e74c3c;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 20px 60px rgba(0,0,0,0.3);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--color-bg); color: var(--color-text); }
+        .main-content { margin-left: 260px; min-height: 100vh; }
+        .page-header { background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%); color: white; padding: var(--spacing-lg) var(--spacing-xl); box-shadow: var(--shadow-sm); padding-top: max(env(safe-area-inset-top), var(--spacing-lg)); }
+        .page-header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: var(--spacing-sm); }
+        .page-header .subtitle { opacity: 0.9; }
+        .container { max-width: 1200px; margin: 0 auto; padding: var(--spacing-xl); }
+        .section { background: var(--color-card-bg); padding: var(--spacing-xl); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); margin-bottom: 2rem; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg); border-bottom: 2px solid var(--color-border-light); padding-bottom: var(--spacing-sm); }
+        .section-header h2 { font-size: 1.5rem; color: var(--color-text); }
+        table { width: 100%; border-collapse: collapse; }
+        table th { background: var(--color-card-hover); padding: var(--spacing-md); text-align: left; font-weight: 600; color: var(--color-text); border-bottom: 2px solid var(--color-border-light); }
+        table td { padding: var(--spacing-md); border-bottom: 1px solid var(--color-border-light); }
+        table tr:hover { background: var(--color-card-hover); }
+        .badge { display: inline-block; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .badge-success { background: #d4edda; color: #27ae60; }
+        .badge-danger { background: #f8d7da; color: #c0392b; }
+        .badge-primary { background: #e3e8ff; color: #667eea; }
+        .btn { padding: var(--spacing-sm) var(--spacing-md); min-height: var(--touch-target-min); border: none; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; white-space: nowrap; line-height: 1.2; }
+        .btn-primary { background: var(--color-primary); color: white; }
+        .btn-primary:hover { background: var(--color-primary-dark); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-success { background: var(--color-success); color: white; }
+        .btn-success:hover { filter: brightness(0.9); }
+        .btn-secondary { background: var(--color-text-muted); color: white; }
+        .btn-secondary:hover { filter: brightness(0.9); }
+        .btn-danger { background: var(--color-danger); color: white; }
+        .btn-danger:hover { filter: brightness(0.9); }
+        .btn-sm { padding: var(--spacing-xs) var(--spacing-sm); font-size: 0.85rem; }
+
+        th.actions-col { width: 1%; white-space: nowrap; }
+        td.actions-cell { white-space: nowrap; }
+        .actions-group { display: inline-flex; align-items: center; gap: 0.5rem; }
+        .actions-group .btn { min-height: 36px; padding: 0.5rem 0.85rem; font-size: 0.84rem; }
+
+        /* Модальное окно */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: var(--color-card-bg); border-radius: var(--radius-lg); width: 90%; max-width: 500px; box-shadow: var(--shadow-md); animation: modalSlide 0.3s ease; }
+        @keyframes modalSlide { from { opacity: 0; transform: translateY(-50px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header { background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%); color: white; padding: var(--spacing-lg) var(--spacing-xl); display: flex; justify-content: space-between; align-items: center; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+        .modal-header h2 { margin: 0; font-size: 1.25rem; }
+        .modal-close { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s; min-width: var(--touch-target-min); min-height: var(--touch-target-min); }
+        .modal-close:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
+        .modal-body { padding: var(--spacing-xl); }
+        .form-group { margin-bottom: var(--spacing-lg); }
+        .form-group label { display: block; margin-bottom: var(--spacing-sm); font-weight: 600; color: var(--color-text); }
+        .form-group input[type="text"], .form-group input[type="password"] { width: 100%; padding: var(--spacing-sm) var(--spacing-md); min-height: var(--touch-target-min); border: 2px solid var(--color-border-light); border-radius: var(--radius-sm); font-size: 1rem; transition: border-color 0.3s; }
+        .form-group input[type="text"]:focus, .form-group input[type="password"]:focus { outline: none; border-color: var(--color-primary); }
+        .form-group .checkbox-label { display: flex; align-items: center; gap: var(--spacing-sm); cursor: pointer; }
+        .form-group .checkbox-label input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-primary); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
+        .modal-footer { padding: var(--spacing-md) var(--spacing-xl); background: var(--color-card-hover); border-radius: 0 0 var(--radius-lg) var(--radius-lg); display: flex; justify-content: flex-end; gap: var(--spacing-md); }
+
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0; }
+            .container { padding: var(--spacing-md); }
+            .section { padding: var(--spacing-md); }
+            .section-header { flex-direction: column; gap: var(--spacing-sm); align-items: flex-start; }
+            .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { min-width: 700px; }
+            .modal-content { width: 96%; max-width: none; max-height: 92vh; overflow-y: auto; }
+            .modal-header { padding: var(--spacing-md); }
+            .modal-body { padding: var(--spacing-md); }
+            .modal-close { min-width: var(--touch-target-min); min-height: var(--touch-target-min); }
+            .form-group input[type="text"], .form-group input[type="password"], .form-group select { font-size: 16px; min-height: var(--touch-target-min); }
+            .form-row { grid-template-columns: 1fr; }
+            .modal-footer { padding: var(--spacing-sm) var(--spacing-md); }
+            .modal-footer .btn { min-height: var(--touch-target-min); display: inline-flex; align-items: center; justify-content: center; }
+            .section-header .btn { min-height: var(--touch-target-min); display: inline-flex; align-items: center; justify-content: center; }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0f1419;
+                --color-text: #ecf0f1;
+                --color-text-muted: #95a5a6;
+                --color-card-bg: #1a1a2e;
+                --color-card-hover: #252d4a;
+                --color-border: #34495e;
+                --color-border-light: #2c3e50;
+            }
+            .form-group input[type="text"], .form-group input[type="password"], .form-group select { background: var(--color-card-hover); color: var(--color-text); }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn-primary:hover, .btn-success:hover, .btn-secondary:hover { filter: none; }
+            .btn-primary:active, .btn-success:active, .btn-secondary:active { transform: scale(0.98); }
+        }
+    </style>
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='specialists_manage' %}
+
+    <div class="main-content">
+    <div class="page-header">
+        <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+        <h1>Специалисты</h1>
+        <div class="subtitle">Управление специалистами системы</div>
+    </div>
+
+    <div class="container">
+        <div class="section">
+            <div class="section-header">
+                <h2>Список специалистов</h2>
+                <button class="btn btn-primary" onclick="openModal()">+ Добавить специалиста</button>
+            </div>
+
+            <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя</th>
+                        <th>Логин</th>
+                        <th>Телефон</th>
+                        <th>Платформы</th>
+                        <th>Роль</th>
+                        <th>Статус</th>
+                        <th class="actions-col">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for spec in specialists %}
+                    <tr>
+                        <td>{{ spec.id }}</td>
+                        <td><strong>{{ spec.name }}</strong></td>
+                        <td>{{ spec.login|default:"-" }}</td>
+                        <td>{{ spec.phone|default:"-" }}</td>
+                        <td>
+                            {% if spec.tg_username or spec.tg_user_id %}
+                            <span class="badge" style="background: #e1f0fa; color: #1a8cd8; margin-bottom: 2px;" title="Telegram: @{{ spec.tg_username|default:'привязан' }}">TG {% if spec.tg_username %}@{{ spec.tg_username }}{% endif %}</span>
+                            {% endif %}
+                            {% if spec.max_username or spec.max_user_id %}
+                            <span class="badge" style="background: #fff0e6; color: #e67e22;" title="MAX: @{{ spec.max_username|default:'привязан' }}">MAX {% if spec.max_username %}@{{ spec.max_username }}{% endif %}</span>
+                            {% endif %}
+                            {% if not spec.tg_username and not spec.tg_user_id and not spec.max_username and not spec.max_user_id %}
+                            <span style="color: var(--color-text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if spec.profession == 2 %}
+                            <span class="badge badge-primary">Директор</span>
+                            {% elif spec.profession == 0 %}
+                            <span class="badge" style="background: #fff3cd; color: #856404;">Бухгалтер</span>
+                            {% elif spec.profession == 1 %}
+                            <span class="badge" style="background: #d1ecf1; color: #0c5460;">Техподдержка</span>
+                            {% elif spec.profession == 3 %}
+                            <span class="badge" style="background: #e2e3f1; color: #383d6e;">Консультант</span>
+                            {% elif spec.profession == 4 %}
+                            <span class="badge" style="background: #f8eafc; color: #7a2d91;">Разрешительная документация</span>
+                            {% elif spec.profession == 5 %}
+                            <span class="badge" style="background: #e8f8f0; color: #1e8449;">Партнёр</span>
+                            {% else %}
+                            <span class="badge" style="background: #e9ecef; color: #6c757d;">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if spec.is_active %}
+                            <span class="badge badge-success">Активен</span>
+                            {% else %}
+                            <span class="badge badge-danger">Неактивен</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions-cell">
+                            <div class="actions-group">
+                                <button class="btn btn-secondary btn-sm" onclick="editSpecialist({{ spec.id }}, '{{ spec.name|escapejs }}', '{{ spec.login|default:""|escapejs }}', '{{ spec.profession|default:""|escapejs }}', '{{ spec.phone|default:""|escapejs }}', '{{ spec.tg_username|default:""|escapejs }}', '{{ spec.max_username|default:""|escapejs }}', {{ spec.is_active|yesno:"true,false" }})">Редактировать</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteSpecialist({{ spec.id }}, '{{ spec.name|escapejs }}')">Деактивировать</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: #95a5a6; padding: 2rem;">Нет специалистов</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно -->
+    <div class="modal" id="specialistModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Добавить специалиста</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="specialistId" value="">
+
+                <div class="form-group">
+                    <label>Имя *</label>
+                    <input type="text" id="specName" placeholder="Иван Иванов">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label id="loginLabel">Логин</label>
+                        <input type="text" id="specLogin" placeholder="ivan">
+                    </div>
+                    <div class="form-group">
+                        <label id="passwordLabel">Пароль</label>
+                        <input type="password" id="specPassword" placeholder="Введите пароль">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Роль</label>
+                        <select id="specProfession" style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #ecf0f1; border-radius: 8px; font-size: 1rem; transition: border-color 0.3s; min-height: 44px;">
+                            <option value="0">Бухгалтер</option>
+                            <option value="1">Техподдержка</option>
+                            <option value="2">Директор</option>
+                            <option value="3">Консультант</option>
+                            <option value="4">Разрешительная документация</option>
+                            <option value="5">Партнёр</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Телефон</label>
+                        <input type="text" id="specPhone" placeholder="+7 999 123-45-67">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Telegram username</label>
+                        <input type="text" id="specTg" placeholder="ivan_ivanov">
+                    </div>
+                    <div class="form-group">
+                        <label>MAX username</label>
+                        <input type="text" id="specMax" placeholder="ivan_ivanov">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="specIsActive" checked>
+                        Активен
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-success" onclick="saveSpecialist()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+    <script>
+        function getCsrfToken() {
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? match[1] : '';
+        }
+        const modal = document.getElementById('specialistModal');
+
+        function openModal() {
+            document.getElementById('modalTitle').textContent = 'Добавить специалиста';
+            document.getElementById('specialistId').value = '';
+            document.getElementById('loginLabel').textContent = 'Логин *';
+            document.getElementById('passwordLabel').textContent = 'Пароль *';
+            document.getElementById('specName').value = '';
+            document.getElementById('specLogin').value = '';
+            document.getElementById('specPassword').value = '';
+            document.getElementById('specPassword').placeholder = 'Введите пароль';
+            document.getElementById('specProfession').value = '0';
+            document.getElementById('specPhone').value = '';
+            document.getElementById('specTg').value = '';
+            document.getElementById('specMax').value = '';
+            document.getElementById('specIsActive').checked = true;
+            modal.classList.add('active');
+        }
+
+        function editSpecialist(id, name, login, profession, phone, tg, maxUsername, isActive) {
+            document.getElementById('modalTitle').textContent = 'Редактировать специалиста';
+            document.getElementById('specialistId').value = id;
+            document.getElementById('loginLabel').textContent = 'Логин';
+            document.getElementById('passwordLabel').textContent = 'Новый пароль';
+            document.getElementById('specName').value = name;
+            document.getElementById('specLogin').value = login;
+            document.getElementById('specPassword').value = '';
+            document.getElementById('specPassword').placeholder = 'Оставьте пустым, если не меняете';
+            document.getElementById('specProfession').value = String(profession);
+            document.getElementById('specPhone').value = phone;
+            document.getElementById('specTg').value = tg;
+            document.getElementById('specMax').value = maxUsername;
+            document.getElementById('specIsActive').checked = isActive;
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
+
+        async function deleteSpecialist(id, name) {
+            if (!confirm(
+                'Вы уверены, что хотите удалить специалиста "' + name + '"?\n\n' +
+                'Если у специалиста есть связанные платежи, чаты или задачи, он будет деактивирован без удаления истории.'
+            )) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/specialist/' + id + '/delete/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    if (data.action === 'deactivated') {
+                        const summary = data?.details?.summary ? ('\nСвязи: ' + data.details.summary) : '';
+                        alert('Специалист деактивирован. История и связанные данные сохранены.' + summary);
+                    }
+                    location.reload();
+                } else {
+                    alert((data.error || 'Не удалось выполнить операцию удаления специалиста.'));
+                }
+            } catch (err) {
+                alert('Ошибка сети: ' + err.message);
+            }
+        }
+
+        async function saveSpecialist() {
+            const id = document.getElementById('specialistId').value;
+            const name = document.getElementById('specName').value.trim();
+            const login = document.getElementById('specLogin').value.trim();
+            const password = document.getElementById('specPassword').value;
+            const profession = document.getElementById('specProfession').value.trim();
+            const phone = document.getElementById('specPhone').value.trim();
+            const tg = document.getElementById('specTg').value.trim();
+            const maxUsername = document.getElementById('specMax').value.trim();
+            const isActive = document.getElementById('specIsActive').checked;
+
+            if (!name) {
+                alert('Имя обязательно!');
+                return;
+            }
+
+            if (!id && !login) {
+                alert('Логин обязателен для нового специалиста!');
+                return;
+            }
+
+            if (!id && !password) {
+                alert('Пароль обязателен для нового специалиста!');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/specialist/save/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({
+                        id: id || null,
+                        name, login, password, profession, phone,
+                        tg_username: tg,
+                        max_username: maxUsername,
+                        is_active: isActive
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            } catch (err) {
+                alert('Ошибка сети: ' + err.message);
+            }
+        }
+
+        // Закрытие по клику вне модалки
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeModal();
+        });
+
+        // Закрытие по Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+    </div><!-- /main-content -->
+</body>
+</html>

@@ -1,0 +1,844 @@
+{% load static ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ company.name }} - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+    <link rel="stylesheet" href="{% static 'bot_app/css/crm/company_detail.css' %}">
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page=partner_mode|yesno:'partner_companies,crm_companies' %}
+
+    <div class="main-content">
+        <div class="header">
+            <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+            <a href="{{ companies_list_url|default:'/crm/companies/' }}" class="header-back">&#8592; Назад к компаниям</a>
+            <h1>Карточка компании</h1>
+        </div>
+
+        <div class="content">
+            <!-- Шапка компании -->
+            <div class="company-header">
+                <h2>{{ company.name }}</h2>
+                <div class="inn">ИНН: {{ company.inn|default:"-" }}{% if company.kpp %} / КПП: {{ company.kpp }}{% endif %}</div>
+                <div class="company-meta">
+                    <div class="company-meta-item">
+                        <span class="label">Телефон</span>
+                        <span class="value">{{ company.phone|default:"Не указан" }}</span>
+                    </div>
+                    <div class="company-meta-item">
+                        <span class="label">Email</span>
+                        <span class="value">{{ company.email|default:"Не указан" }}</span>
+                    </div>
+                    <div class="company-meta-item">
+                        <span class="label">Адрес</span>
+                        <span class="value">{{ company.address|default:"Не указан" }}</span>
+                    </div>
+                    <div class="company-meta-item">
+                        <span class="label">Создана</span>
+                        <span class="value">{{ company.created_at|ru_date }}</span>
+                    </div>
+                </div>
+                {% if user.is_director %}
+                <div style="margin-top:0.9rem;">
+                    <a href="{% url 'bot_app:crm_tasks' %}?open_create=1&prefill_source_type=manual&prefill_title={{ company.name|urlencode }}&prefill_description={{ 'Задача из карточки компании'|urlencode }}&prefill_client_ids={% for contact in contacts %}{% if not forloop.first %},{% endif %}{{ contact.contact_id }}{% endfor %}"
+                       style="display:inline-flex;align-items:center;gap:0.45rem;padding:0.6rem 1rem;border-radius:8px;background:rgba(255,255,255,0.2);color:#fff;text-decoration:none;font-weight:600;border:1px solid rgba(255,255,255,0.35);">
+                        ✅ Создать задачу
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Данные компании -->
+            <div class="section-title">
+                <h2>&#x1F3E2; Данные компании</h2>
+                <span class="badge">Только CRM</span>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header"><h3>&#x1F4CB; Реквизиты</h3></div>
+                    <div class="card-body">
+                        <div class="info-list">
+                            <div class="info-item">
+                                <span class="info-label">Название</span>
+                                <span class="info-value editable" data-field="name" data-value="{{ company.name|default:'' }}">
+                                    {{ company.name|default:"-" }} <span class="edit-icon">&#9999;&#65039;</span>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">ИНН</span>
+                                <span class="info-value editable" data-field="inn" data-value="{{ company.inn|default:'' }}">
+                                    {{ company.inn|default:"-" }} <span class="edit-icon">&#9999;&#65039;</span>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">КПП</span>
+                                <span class="info-value editable" data-field="kpp" data-value="{{ company.kpp|default:'' }}">
+                                    {{ company.kpp|default:"-" }} <span class="edit-icon">&#9999;&#65039;</span>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">ОГРН</span>
+                                <span class="info-value editable" data-field="ogrn" data-value="{{ company.ogrn|default:'' }}">
+                                    {{ company.ogrn|default:"-" }} <span class="edit-icon">&#9999;&#65039;</span>
+                                </span>
+                            </div>
+                            {% if company.partner_owner_name %}
+                            <div class="info-item">
+                                <span class="info-label">Источник</span>
+                                <span class="info-value"><span class="badge badge-warning">Компания партнёра: {{ company.partner_owner_name }}</span></span>
+                            </div>
+                            {% endif %}
+                            {% if company.added_by_name %}
+                            <div class="info-item">
+                                <span class="info-label">Добавил в CRM</span>
+                                <span class="info-value">
+                                    <span class="badge badge-info">{{ company.added_by_name }}{% if company.added_by_profession %} ({{ company.added_by_profession }}){% endif %}</span>
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>&#x1F4DE; Контактная информация</h3></div>
+                    <div class="card-body">
+                        <div class="info-list">
+                            <div class="info-item">
+                                <span class="info-label">Телефон</span>
+                                <span class="info-value editable" data-field="phone" data-value="{{ company.phone|default:'' }}">
+                                    {{ company.phone|default:"-" }} <span class="edit-icon">&#9999;&#65039;</span>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Email</span>
+                                <span class="info-value editable" data-field="email" data-value="{{ company.email|default:'' }}">
+                                    {{ company.email|default:"-" }} <span class="edit-icon">&#9999;&#65039;</span>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Адрес</span>
+                                <span class="info-value editable" data-field="address" data-value="{{ company.address|default:'' }}">
+                                    {{ company.address|default:"-" }} <span class="edit-icon">&#9999;&#65039;</span>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Сайт</span>
+                                <span class="info-value editable" data-field="website" data-value="{{ company.website|default:'' }}">
+                                    {{ company.website|default:"-" }} <span class="edit-icon">&#9999;&#65039;</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-header"><h3>&#x1F4DD; Заметка</h3></div>
+                <div class="card-body">
+                    <span class="editable" data-field="note" data-input-type="textarea" data-value="{{ company.note|default:'' }}" style="display:block; white-space: pre-wrap;">
+                        {{ company.note|default:"-" }} <span class="edit-icon">&#9999;&#65039;</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- КОНТАКТЫ КОМПАНИИ -->
+            <div class="section-title">
+                <h2>&#x1F464; {% if partner_mode %}Клиенты / Контакты компании{% else %}Контакты{% endif %}</h2>
+                <span class="badge">{{ contacts|length }}</span>
+                <button class="btn-add" style="margin-left: auto;" onclick="openContactModal()">+ Добавить контакт</button>
+            </div>
+
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-body" style="padding: 0;">
+                    {% if contacts %}
+                    <div id="contacts-list">
+                        {% for c in contacts %}
+                        <div class="contact-item" data-contact-id="{{ c.contact_id }}">
+                            <div class="contact-avatar">{{ c.first_name|slice:":1"|default:"?" }}</div>
+                            <div class="contact-info">
+                                <div class="contact-name">
+                                    <a href="{% if partner_mode %}{% url 'bot_app:partner_client_detail' c.contact_id %}{% else %}{% url 'bot_app:crm_client_detail' c.contact_id %}{% endif %}">{{ c.first_name|default:"" }} {{ c.last_name|default:"" }}</a>
+                                    {% if not partner_mode and c.role %}<span class="contact-role">{{ c.role }}</span>{% endif %}
+                                </div>
+                                <div class="contact-details">
+                                    {% if c.phone %}<span>&#x1F4F1; {{ c.phone }}</span>{% endif %}
+                                    {% if c.email %}<span>&#x2709;&#65039; {{ c.email }}</span>{% endif %}
+                                    {% if c.tg_username %}<span>&#x1F4AC; @{{ c.tg_username }}</span>{% endif %}
+                                </div>
+                            </div>
+                            <button class="contact-remove" onclick="removeContact({{ c.contact_id }})" title="Отвязать">&#x2716; Убрать</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty" id="contacts-empty">
+                        <div class="icon">&#x1F464;</div>
+                        <p>Контакты не привязаны</p>
+                        <button class="btn-add" style="margin-top:0.5rem;" onclick="openContactModal()">+ Добавить контакт</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ЗАКАЗЫ / СДЕЛКИ КОМПАНИИ -->
+            <div class="section-title">
+                <h2>&#x1F4BC; Сделки</h2>
+                <span class="badge">{{ orders|length }}</span>
+                <button class="btn-add" style="margin-left: auto;" onclick="openDealModal()">+ Новая сделка</button>
+            </div>
+
+            <div class="card" style="margin-bottom: 2rem;">
+                {% if orders %}
+                <div class="table-container" style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Продукт</th>
+                                <th>Сумма</th>
+                                <th>Статус</th>
+                                <th>Контакт</th>
+                                <th>Специалист</th>
+                                <th>Автор</th>
+                                <th>Дата</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for o in orders %}
+                            <tr>
+                                <td>{{ o.id }}</td>
+                                <td>{{ o.item_names|default:o.description|default:"-"|truncatewords:8 }}</td>
+                                <td><strong>{{ o.amount|default:0 }} &#8381;</strong></td>
+                                <td>
+                                    {% if o.status == 'ADVANCE' %}
+                                        <span class="badge badge-info">Аванс</span>
+                                    {% elif o.paid_at or o.status == 'CONFIRMED' %}
+                                        <span class="badge badge-success">Оплачен</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">Не оплачен</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if o.user_id %}
+                                        <a href="{% url 'bot_app:crm_client_detail' o.user_id %}" style="color:#667eea; text-decoration:none;">
+                                            {{ o.first_name|default:"" }} {{ o.last_name|default:"" }}
+                                        </a>
+                                    {% else %}-{% endif %}
+                                </td>
+                                <td>
+                                    {% if o.specialist_name %}
+                                    <span style="font-weight:600;">{{ o.specialist_name }}</span><br>
+                                    <span class="badge {% if o.specialist_profession == 0 %}badge-primary{% elif o.specialist_profession == 1 %}badge-warning{% elif o.specialist_profession == 3 %}badge-success{% elif o.specialist_profession == 4 %}badge-info{% else %}badge-secondary{% endif %}" style="font-size:0.7rem;">
+                                        {% if o.specialist_profession == 0 %}Бухгалтер{% elif o.specialist_profession == 1 %}Тех. специалист{% elif o.specialist_profession == 2 %}Директор{% elif o.specialist_profession == 3 %}Консультант{% elif o.specialist_profession == 4 %}Разрешительная документация{% else %}Специалист{% endif %}
+                                    </span>
+                                    {% else %}-{% endif %}
+                                </td>
+                                <td>{{ o.author_name|default:"-" }}</td>
+                                <td>{{ o.created_at|ru_date }}</td>
+                                <td>
+                                    <button class="btn-small btn-edit"
+                                        data-order-id="{{ o.id }}"
+                                        data-amount="{{ o.amount|default:0 }}"
+                                        data-status="{{ o.status }}"
+                                        data-description="{{ o.description|default:''|escape }}"
+                                        data-comment="{{ o.internal_comment|default:''|escape }}"
+                                        data-paid-at="{% if o.paid_at %}{{ o.paid_at|date:'c' }}{% endif %}"
+                                        data-specialist-id="{{ o.specialist_id|default:'' }}"
+                                        data-buyer-name="{% if o.first_name or o.last_name %}{{ o.first_name|default:''|escape }} {{ o.last_name|default:''|escape }}{% else %}Не привязан{% endif %}"
+                                        data-buyer-url="{% if o.user_id %}{% url 'bot_app:crm_client_detail' o.user_id %}{% endif %}"
+                                        onclick="openCompanyOrderEdit(this)" title="Редактировать">&#9999;&#65039;</button>
+                                    <button class="btn-small" style="background:#f8d7da;color:#c0392b;" onclick="deleteCompanyOrder({{ o.id }})" title="Удалить">&#x1F5D1;&#65039;</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="card-body">
+                    <div class="empty">
+                        <div class="icon">&#x1F4BC;</div>
+                        <p>Сделок пока нет</p>
+                        <button class="btn-add" style="margin-top:0.5rem;" onclick="openDealModal()">+ Новая сделка</button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ККТ -->
+            <div class="section-title">
+                <h2>&#x1F3EA; Торговые точки (ККТ)</h2>
+                <span class="badge">{{ kkt_list|length }}</span>
+                <button class="btn-add" style="margin-left: auto;" onclick="openKktModal()">+ Добавить ККТ</button>
+            </div>
+
+            {% if kkt_list %}
+            {% for kkt in kkt_list %}
+            <div class="kkt-card" id="kkt-card-{{ kkt.id }}">
+                <div class="kkt-card-header" onclick="toggleKktCard({{ kkt.id }})">
+                    <h4>
+                        <span class="badge badge-info">ККТ #{{ kkt.kkt_slot }}</span>
+                        {{ kkt.name|default:kkt.address|default:"Без названия"|truncatewords:5 }}
+                    </h4>
+                    <div class="kkt-actions">
+                        <button onclick="event.stopPropagation(); deleteKkt({{ kkt.id }})" title="Удалить">&#x1F5D1;&#65039;</button>
+                        <span class="expand-icon">&#x25BC;</span>
+                    </div>
+                </div>
+                <div class="kkt-card-body">
+                    <div class="kkt-tabs">
+                        <button class="kkt-tab active" onclick="switchKktTab({{ kkt.id }}, 'point')">&#x1F4CD; Основное</button>
+                        <button class="kkt-tab" onclick="switchKktTab({{ kkt.id }}, 'services')">&#x1F527; Сервисы</button>
+                        <button class="kkt-tab" onclick="switchKktTab({{ kkt.id }}, 'chz')">&#x2705; Честный Знак</button>
+                        <button class="kkt-tab" onclick="switchKktTab({{ kkt.id }}, 'tspiot')">&#x1F4DF; ТСПИоТ</button>
+                        <button class="kkt-tab" onclick="switchKktTab({{ kkt.id }}, 'kkt')">&#x1F5A5;&#65039; ККТ</button>
+                        <button class="kkt-tab" onclick="switchKktTab({{ kkt.id }}, 'fn')">&#x1F4BE; ФН</button>
+                        <button class="kkt-tab" onclick="switchKktTab({{ kkt.id }}, 'ofd')">&#x1F4E1; ОФД</button>
+                        <button class="kkt-tab" onclick="switchKktTab({{ kkt.id }}, 'trade')">&#x1F4BC; Торговля</button>
+                        <button class="kkt-tab" onclick="switchKktTab({{ kkt.id }}, 'equip')">&#x1F4F1; Оборудование</button>
+                    </div>
+
+                    <!-- Основное -->
+                    <div class="kkt-tab-content active" id="kkt-{{ kkt.id }}-point">
+                        <div class="kkt-grid">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Название т.т.</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'name')" data-value="{{ kkt.name|default:'' }}">{{ kkt.name|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Адрес т.т.</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'address')" data-value="{{ kkt.address|default:'' }}">{{ kkt.address|default:"-" }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Телефон т.т.</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'phone')" data-value="{{ kkt.phone|default:'' }}">{{ kkt.phone|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Ориентир</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'landmark')" data-value="{{ kkt.landmark|default:'' }}">{{ kkt.landmark|default:"-"|truncatewords:10 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Сервисы Прошивки -->
+                    <div class="kkt-tab-content" id="kkt-{{ kkt.id }}-services">
+                        <div class="kkt-grid">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ЭЦП</span>
+                                    <span class="kkt-field-value">
+                                        {% if kkt.ecp_enabled %}<span class="badge badge-success">Да</span>{% else %}<span class="badge badge-secondary">Нет</span>{% endif %}
+                                        <button class="btn-small btn-edit" style="margin-left:0.5rem;" onclick="event.stopPropagation(); toggleKktBool({{ kkt.id }}, 'ecp_enabled', {{ kkt.ecp_enabled|yesno:'1,0' }})">&#x1F504;</button>
+                                    </span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ЭЦП тип</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'ecp_type')" data-value="{{ kkt.ecp_type|default:'' }}">{{ kkt.ecp_type|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ЭЦП срок</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'ecp_expires_at', 'date')" data-value="{{ kkt.ecp_expires_at|date:'Y-m-d'|default:'' }}">{{ kkt.ecp_expires_at|ru_date|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ТО ККТ уюрты</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'to_kkt_yurt', 'date')" data-value="{{ kkt.to_kkt_yurt|date:'Y-m-d'|default:'' }}">{{ kkt.to_kkt_yurt|ru_date|default:"-" }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">СИМ карта</span>
+                                    <span class="kkt-field-value">
+                                        {% if kkt.has_sim %}<span class="badge badge-success">Да</span>{% else %}<span class="badge badge-secondary">Нет</span>{% endif %}
+                                        <button class="btn-small btn-edit" style="margin-left:0.5rem;" onclick="event.stopPropagation(); toggleKktBool({{ kkt.id }}, 'has_sim', {{ kkt.has_sim|yesno:'1,0' }})">&#x1F504;</button>
+                                    </span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Оплата СИМ</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'sim_payment_at', 'date')" data-value="{{ kkt.sim_payment_at|date:'Y-m-d'|default:'' }}">{{ kkt.sim_payment_at|ru_date|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ЭВОТОР УТМ</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'evotor_utm')" data-value="{{ kkt.evotor_utm|default:'' }}">{{ kkt.evotor_utm|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="kkt-field" style="margin-top:1rem;">
+                            <span class="kkt-field-label">Комментарий ЭЦП</span>
+                            <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'ecp_comment')" data-value="{{ kkt.ecp_comment|default:'' }}" style="text-align:left;">{{ kkt.ecp_comment|default:"-"|truncatewords:20 }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Честный Знак -->
+                    <div class="kkt-tab-content" id="kkt-{{ kkt.id }}-chz">
+                        <div class="kkt-grid">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Регистрация в ЧЗ</span>
+                                    <span class="kkt-field-value">
+                                        {% if kkt.chz_registered %}<span class="badge badge-success">Да</span>{% else %}<span class="badge badge-secondary">Нет</span>{% endif %}
+                                        <button class="btn-small btn-edit" style="margin-left:0.5rem;" onclick="event.stopPropagation(); toggleKktBool({{ kkt.id }}, 'chz_registered', {{ kkt.chz_registered|yesno:'1,0' }})">&#x1F504;</button>
+                                    </span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Токен ЧЗ</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'chz_token')" data-value="{{ kkt.chz_token|default:'' }}" style="font-family:monospace;font-size:0.8rem;">{{ kkt.chz_token|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Наличие ЭП</span>
+                                    <span class="kkt-field-value">
+                                        {% if kkt.chz_has_ep %}<span class="badge badge-success">Да</span>{% else %}<span class="badge badge-secondary">Нет</span>{% endif %}
+                                        <button class="btn-small btn-edit" style="margin-left:0.5rem;" onclick="event.stopPropagation(); toggleKktBool({{ kkt.id }}, 'chz_has_ep', {{ kkt.chz_has_ep|yesno:'1,0' }})">&#x1F504;</button>
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Вид товара ЧЗ</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'chz_product_type')" data-value="{{ kkt.chz_product_type|default:'' }}">{{ kkt.chz_product_type|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ID FIAS (ГАР)</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'chz_fias_id')" data-value="{{ kkt.chz_fias_id|default:'' }}" style="font-family:monospace;font-size:0.85rem;">{{ kkt.chz_fias_id|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ТСПИоТ -->
+                    <div class="kkt-tab-content" id="kkt-{{ kkt.id }}-tspiot">
+                        <div class="kkt-grid">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Дата установки</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'tspiot_installed_at', 'date')" data-value="{{ kkt.tspiot_installed_at|date:'Y-m-d'|default:'' }}">{{ kkt.tspiot_installed_at|ru_date|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Окончание тарифа</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'tspiot_tariff_expires_at', 'date')" data-value="{{ kkt.tspiot_tariff_expires_at|date:'Y-m-d'|default:'' }}">{{ kkt.tspiot_tariff_expires_at|ru_date|default:"-" }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ВЕНДЕР</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'tspiot_vendor')" data-value="{{ kkt.tspiot_vendor|default:'' }}">{{ kkt.tspiot_vendor|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ККТ -->
+                    <div class="kkt-tab-content" id="kkt-{{ kkt.id }}-kkt">
+                        <div class="kkt-grid">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Дата регистрации</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'kkt_registered_at', 'date')" data-value="{{ kkt.kkt_registered_at|date:'Y-m-d'|default:'' }}">{{ kkt.kkt_registered_at|ru_date|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Модель ККТ</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'kkt_model')" data-value="{{ kkt.kkt_model|default:'' }}">{{ kkt.kkt_model|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ЗН ККТ</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'kkt_serial_number')" data-value="{{ kkt.kkt_serial_number|default:'' }}">{{ kkt.kkt_serial_number|default:"-" }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">РН ККТ</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'kkt_reg_number')" data-value="{{ kkt.kkt_reg_number|default:'' }}">{{ kkt.kkt_reg_number|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Прошивка ККТ</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'kkt_firmware')" data-value="{{ kkt.kkt_firmware|default:'' }}">{{ kkt.kkt_firmware|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ФН -->
+                    <div class="kkt-tab-content" id="kkt-{{ kkt.id }}-fn">
+                        <div class="kkt-grid">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ЗН ФН</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'fn_serial_number')" data-value="{{ kkt.fn_serial_number|default:'' }}">{{ kkt.fn_serial_number|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Тип ФН</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'fn_type')" data-value="{{ kkt.fn_type|default:'' }}">{{ kkt.fn_type|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Срок ФН</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'fn_expires_at', 'date')" data-value="{{ kkt.fn_expires_at|date:'Y-m-d'|default:'' }}" style="{% if kkt.fn_expires_at and kkt.fn_expires_at < today %}color:#e74c3c;font-weight:bold;{% endif %}">{{ kkt.fn_expires_at|ru_date|default:"-" }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Производитель ФН</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'fn_manufacturer')" data-value="{{ kkt.fn_manufacturer|default:'' }}">{{ kkt.fn_manufacturer|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ОФД -->
+                    <div class="kkt-tab-content" id="kkt-{{ kkt.id }}-ofd">
+                        <div class="kkt-grid">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">ИНН ОФД</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'ofd_inn')" data-value="{{ kkt.ofd_inn|default:'' }}">{{ kkt.ofd_inn|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Срок ОФД</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'ofd_expires_at', 'date')" data-value="{{ kkt.ofd_expires_at|date:'Y-m-d'|default:'' }}" style="{% if kkt.ofd_expires_at and kkt.ofd_expires_at < today %}color:#e74c3c;font-weight:bold;{% endif %}">{{ kkt.ofd_expires_at|ru_date|default:"-" }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Название ОФД</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'ofd_name')" data-value="{{ kkt.ofd_name|default:'' }}">{{ kkt.ofd_name|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Торговля -->
+                    <div class="kkt-tab-content" id="kkt-{{ kkt.id }}-trade">
+                        <div class="kkt-grid">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Система торговли</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'trade_system')" data-value="{{ kkt.trade_system|default:'' }}">{{ kkt.trade_system|default:"-" }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">СНО</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'sno')" data-value="{{ kkt.sno|default:'' }}">{{ kkt.sno|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="kkt-grid" style="margin-top:1rem;">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Маркировка</span>
+                                    <span class="kkt-field-value">
+                                        {% if kkt.marking_enabled %}<span class="badge badge-success">Да</span>{% else %}<span class="badge badge-secondary">Нет</span>{% endif %}
+                                        <button class="btn-small btn-edit" style="margin-left:0.5rem;" onclick="event.stopPropagation(); toggleKktBool({{ kkt.id }}, 'marking_enabled', {{ kkt.marking_enabled|yesno:'1,0' }})">&#x1F504;</button>
+                                    </span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Срок маркировки</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'mark_expires_at', 'date')" data-value="{{ kkt.mark_expires_at|date:'Y-m-d'|default:'' }}" style="{% if kkt.mark_expires_at and kkt.mark_expires_at < today %}color:#e74c3c;font-weight:bold;{% endif %}">{{ kkt.mark_expires_at|ru_date|default:"-" }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Вид маркировки</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'marking_type')" data-value="{{ kkt.marking_type|default:'' }}">{{ kkt.marking_type|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Оборудование -->
+                    <div class="kkt-tab-content" id="kkt-{{ kkt.id }}-equip">
+                        <div class="kkt-grid">
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">Модель сканера</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'scanner_model')" data-value="{{ kkt.scanner_model|default:'' }}">{{ kkt.scanner_model|default:"-" }}</span>
+                                </div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">IMEI</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'imei')" data-value="{{ kkt.imei|default:'' }}">{{ kkt.imei|default:"-" }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="kkt-field">
+                                    <span class="kkt-field-label">СИМ номер</span>
+                                    <span class="kkt-field-value kkt-editable" onclick="editKktField(this, {{ kkt.id }}, 'sim_number')" data-value="{{ kkt.sim_number|default:'' }}">{{ kkt.sim_number|default:"-" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="card">
+                <div class="card-body">
+                    <div class="empty">
+                        <div class="icon">&#x1F3EA;</div>
+                        <p>ККТ не зарегистрированы</p>
+                        <button class="btn-add" style="margin-top:0.5rem;" onclick="openKktModal()">+ Добавить ККТ</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Модалка добавления контакта -->
+    <div id="contact-modal" class="modal">
+        <div class="modal-content" style="max-width:550px;">
+            <div class="modal-header">
+                <h3>Добавить контакт</h3>
+                <button class="modal-close" onclick="closeContactModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tab-buttons">
+                    <div class="tab-btn active" onclick="switchContactTab('existing')">Найти в базе</div>
+                    <div class="tab-btn" onclick="switchContactTab('new')">Создать нового</div>
+                </div>
+
+                <!-- Поиск существующего -->
+                <div class="tab-panel active" id="tab-existing">
+                    <div class="search-wrapper">
+                        <input type="text" id="contact-search" placeholder="Поиск по имени, телефону, ИНН, организации..." oninput="searchContacts(this.value)">
+                        <div class="autocomplete-list" id="contact-autocomplete"></div>
+                    </div>
+                    <input type="hidden" id="selected-contact-id" value="">
+                    <div id="selected-contact-preview" style="margin-top:1rem; display:none; padding:0.75rem; background:#f0f4ff; border-radius:8px;">
+                        <strong id="selected-contact-name"></strong>
+                        <div id="selected-contact-details" style="font-size:0.85rem; color:#7f8c8d;"></div>
+                    </div>
+                    <div class="form-group" style="margin-top:1rem; {% if partner_mode %}display:none;{% endif %}">
+                        <label>Роль в компании</label>
+                        <input type="text" id="contact-role-existing" placeholder="Директор, Бухгалтер, Менеджер...">
+                    </div>
+                </div>
+
+                <!-- Создать нового -->
+                <div class="tab-panel" id="tab-new">
+                    <div class="form-group">
+                        <label>Имя *</label>
+                        <input type="text" id="new-first-name" placeholder="Иван">
+                    </div>
+                    <div class="form-group">
+                        <label>Фамилия</label>
+                        <input type="text" id="new-last-name" placeholder="Иванов">
+                    </div>
+                    <div class="form-group">
+                        <label>Телефон</label>
+                        <input type="tel" id="new-phone" placeholder="+7 900 000 00 00" value="+7">
+                    </div>
+                    <div class="form-group">
+                        <label>ИНН</label>
+                        <input type="text" id="new-inn" placeholder="1234567890">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="new-email" placeholder="ivan@mail.ru">
+                    </div>
+                    <div class="form-group" style="{% if partner_mode %}display:none;{% endif %}">
+                        <label>Роль в компании</label>
+                        <input type="text" id="contact-role-new" placeholder="Директор, Бухгалтер, Менеджер...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeContactModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveContact()">Добавить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка создания сделки -->
+    <div id="deal-modal" class="modal">
+        <div class="modal-content" style="max-width:550px;">
+            <div class="modal-header">
+                <h3>Новая сделка для компании</h3>
+                <button class="modal-close" onclick="closeDealModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Контакт (необязательно)</label>
+                    <select id="deal-contact-id" style="width:100%;padding:0.75rem;border:2px solid #e0e0e0;border-radius:8px;font-size:1rem;">
+                        <option value="">— Без контакта (сделка с компанией) —</option>
+                        {% for c in contacts %}
+                        <option value="{{ c.contact_id }}">{{ c.first_name|default:"" }} {{ c.last_name|default:"" }}{% if not partner_mode and c.role %} ({{ c.role }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Продукт / Услуга *</label>
+                    <input type="text" id="deal-product" placeholder="Настройка ККТ, Обслуживание...">
+                </div>
+                <div class="form-group">
+                    <label>Сумма, &#8381;</label>
+                    <input type="number" id="deal-amount" placeholder="0" min="0" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="deal-description" rows="3" placeholder="Подробности сделки..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Статус</label>
+                    <select id="deal-status" style="width:100%;padding:0.75rem;border:2px solid #e0e0e0;border-radius:8px;font-size:1rem;">
+                        <option value="CONFIRMED" selected>Оплачены</option>
+                        <option value="ADVANCE">Аванс</option>
+                        <option value="INIT">Не оплачены</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDealModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveDeal()">Создать сделку</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка редактирования сделки -->
+    <div id="order-edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Редактировать сделку <span id="edit-order-id-label"></span></h3>
+                <button class="modal-close" onclick="closeOrderEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-order-id">
+                <div class="form-group">
+                    <label>Сумма, &#8381;</label>
+                    <input type="number" id="edit-order-amount" placeholder="0" min="0" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Статус</label>
+                    <select id="edit-order-paid">
+                        <option value="paid">Оплачен</option>
+                        <option value="advance">Аванс (предоплата)</option>
+                        <option value="unpaid">Не оплачен</option>
+                        <option value="cancelled">Отменён</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Описание / услуга</label>
+                    <textarea id="edit-order-description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Внутренняя заметка</label>
+                    <textarea id="edit-order-comment" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Дата оплаты</label>
+                    <input type="datetime-local" id="edit-order-paid-at">
+                </div>
+                {% if can_edit_specialist %}
+                <div class="form-group">
+                    <label>Специалист</label>
+                    <select id="edit-order-specialist-id">
+                        <option value="">Не назначен</option>
+                        {% for sp in specialists_for_edit %}
+                        <option value="{{ sp.id }}">{{ sp.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div class="form-group">
+                    <label>Покупатель</label>
+                    <div id="edit-order-buyer-box" style="padding:8px 10px;background:#f8f9fa;border:1px solid var(--color-border);border-radius:8px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeOrderEditModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveOrderEdit()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка ККТ -->
+    <div id="kkt-modal" class="modal">
+        <div class="modal-content" style="max-width:650px;max-height:90vh;overflow-y:auto;">
+            <div class="modal-header">
+                <h3>Добавить ККТ (Торговую точку)</h3>
+                <button class="modal-close" onclick="closeKktModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom:1.5rem;background:#f8f9fa;padding:1rem;border-radius:8px;border-left:3px solid #6c5ce7;">
+                    <label style="font-weight:600;color:#6c5ce7;">👤 Владелец кассы (клиент) *</label>
+                    <select id="kkt-owner-contact" style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:6px;margin-top:0.4rem;font-size:0.95rem;">
+                        <option value="">— Выберите из контактов компании —</option>
+                        {% for c in contacts %}
+                        <option value="{{ c.contact_id }}">{{ c.first_name|default:"" }} {{ c.last_name|default:"" }}{% if c.phone %} ({{ c.phone }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <small style="color:#666;margin-top:0.3rem;display:block;">Этот клиент увидит сроки кассы в Telegram/Max боте</small>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="form-group">
+                        <label>Номер ККТ</label>
+                        <input type="number" id="kkt-slot" placeholder="Будет присвоен автоматически" min="1" readonly>
+                        <small style="color:#666;margin-top:0.3rem;display:block;">Будет присвоен автоматически</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Название торговой точки</label>
+                        <input type="text" id="kkt-name" placeholder="Магазин на Ленина">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Адрес торговой точки</label>
+                    <input type="text" id="kkt-address" placeholder="г. Москва, ул. Примерная, д.1">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="form-group">
+                        <label>Телефон т.т.</label>
+                        <input type="text" id="kkt-phone" placeholder="+7 999 123 45 67">
+                    </div>
+                    <div class="form-group">
+                        <label>Ориентир</label>
+                        <input type="text" id="kkt-landmark" placeholder="Возле метро...">
+                    </div>
+                </div>
+                <hr style="margin:1rem 0;border:none;border-top:1px solid #e0e0e0;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="form-group">
+                        <label>Модель ККТ</label>
+                        <input type="text" id="kkt-model" placeholder="АТОЛ 91Ф">
+                    </div>
+                    <div class="form-group">
+                        <label>Дата регистрации ККТ</label>
+                        <input type="date" id="kkt-registered-at">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div class="form-group">
+                        <label>ЗН ККТ</label>
+                        <input type="text" id="kkt-serial-number" placeholder="00123456789012">
+                    </div>
+                    <div class="form-group">
+                        <label>РН ККТ</label>
+                        <input type="text" id="kkt-reg-number" placeholder="0001234567012345">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeKktModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveKkt()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.CRM_COMPANY_DETAIL_CONFIG = {
+            companyId: {{ company.id }},
+            companyApiBase: '{{ company_api_base|default:"/crm/company/"|escapejs }}',
+            contactsSearchUrl: '{{ contacts_search_url|default:"/api/contacts/search/"|escapejs }}'
+        };
+    </script>
+    <script src="{% static 'bot_app/js/crm/company_detail.js' %}"></script>
+    {% include 'bot_app/_sidebar_scripts.html' %}
+</body>
+</html>

@@ -1,0 +1,1276 @@
+{% load static ru_dates %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Задачи - CRM</title>
+    {% include 'bot_app/_sidebar_styles.html' %}
+    {% include 'bot_app/_layout_styles.html' %}
+        <link rel="stylesheet" href="{% static 'bot_app/css/crm/tasks_list.css' %}">
+
+</head>
+<body>
+    {% include 'bot_app/_sidebar.html' with active_page='crm_tasks' %}
+
+    <div class="main-content tasks-page">
+        <div class="header tasks-page-header">
+            <div class="tasks-page-header-main">
+                <button class="burger-menu" onclick="toggleSidebar()">&#9776;</button>
+                <div class="tasks-page-header-text">
+                    <p class="tasks-page-overline">CRM / Рабочий список</p>
+                    <h1>{% if user.is_director %}Задачи{% else %}Мои задачи{% endif %}</h1>
+                    <p class="tasks-page-subtitle">Контроль заявок, продлений и сделок в одном рабочем списке</p>
+                </div>
+            </div>
+            {% if user.is_director %}
+            <div class="header-actions">
+                <button class="btn btn-primary btn-create-task" onclick="openCreateModal()">+ Создать задачу</button>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="content">
+            <div class="table-container">
+                <section class="tasks-command-center" aria-label="Центр управления задачами">
+                    <button class="tasks-overview-toggle" type="button" aria-expanded="false" aria-controls="tasks-overview-body">
+                        <div class="tasks-overview-heading">
+                            <h2 class="tasks-overview-title">Обзор задач</h2>
+                            <p class="tasks-overview-subtitle">Ключевые показатели за выбранный период</p>
+                        </div>
+                        <div class="tasks-overview-actions">
+                            <div class="tasks-overview-summary" aria-live="polite">
+                                <span class="task-summary-chip">Всего: <span id="task-summary-total">{{ stats.total }}</span></span>
+                                {% if user.is_director %}
+                                <span class="task-summary-chip">Ожидают: <span id="task-summary-awaiting">{{ stats.awaiting }}</span></span>
+                                {% endif %}
+                                <span class="task-summary-chip">В работе: <span id="task-summary-in-progress">{{ stats.in_progress }}</span></span>
+                                <span class="task-summary-chip">Отложено: <span id="task-summary-postponed">{{ stats.postponed }}</span></span>
+                                <span class="task-summary-chip">Выполнено: <span id="task-summary-done">{{ stats.done }}</span></span>
+                                <span class="task-summary-chip">Просрочено: <span id="task-summary-overdue">{{ stats.overdue }}</span></span>
+                            </div>
+                            <span class="tasks-overview-toggle-btn" aria-hidden="true"><span class="tasks-overview-toggle-label">Свернуть</span><span class="tasks-overview-toggle-arrow"></span></span>
+                        </div>
+                    </button>
+                    <div class="tasks-overview-body" id="tasks-overview-body">
+                    <div class="tasks-overview-layout">
+                        <div class="tasks-stat-grid">
+                            <div class="task-stat-card task-stat-total">
+                                <span class="task-stat-value" id="task-stat-total">{{ stats.total }}</span>
+                                <span class="task-stat-label">Всего</span>
+                                <span class="task-stat-hint">Все задачи</span>
+                            </div>
+                            {% if user.is_director %}
+                            <div class="task-stat-card task-stat-awaiting">
+                                <span class="task-stat-value" id="task-stat-awaiting">{{ stats.awaiting }}</span>
+                                <span class="task-stat-label">В ожидании</span>
+                                <span class="task-stat-hint">Требуют назначения</span>
+                            </div>
+                            {% endif %}
+                            <div class="task-stat-card task-stat-progress">
+                                <span class="task-stat-value" id="task-stat-in-progress">{{ stats.in_progress }}</span>
+                                <span class="task-stat-label">В работе</span>
+                                <span class="task-stat-hint">Активные задачи</span>
+                            </div>
+                            <div class="task-stat-card task-stat-postponed">
+                                <span class="task-stat-value" id="task-stat-postponed">{{ stats.postponed }}</span>
+                                <span class="task-stat-label">Отложено</span>
+                                <span class="task-stat-hint">Вернемся позже</span>
+                            </div>
+                            <div class="task-stat-card task-stat-done">
+                                <span class="task-stat-value" id="task-stat-done">{{ stats.done }}</span>
+                                <span class="task-stat-label">Выполнено</span>
+                                <span class="task-stat-hint">Закрытые задачи</span>
+                            </div>
+                            <div class="task-stat-card task-stat-overdue">
+                                <span class="task-stat-value" id="task-stat-overdue">{{ stats.overdue }}</span>
+                                <span class="task-stat-label">Просрочено</span>
+                                <span class="task-stat-hint">Требуют реакции</span>
+                            </div>
+                        </div>
+
+                        <div class="task-stats-period" aria-label="Период статистики">
+                            <div>
+                                <div class="task-stats-period-title">Период</div>
+                                <div class="task-stats-period-display" id="task-stats-period-display">{{ stats_date_from_display }} — {{ stats_date_to_display }}</div>
+                            </div>
+                            <div class="task-stats-period-controls">
+                                <div class="task-stats-period-field">
+                                    <label for="task-stats-date-from">С</label>
+                                    <input type="date" id="task-stats-date-from" value="{{ stats_date_from }}">
+                                </div>
+                                <div class="task-stats-period-field">
+                                    <label for="task-stats-date-to">По</label>
+                                    <input type="date" id="task-stats-date-to" value="{{ stats_date_to }}">
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" type="button" id="task-stats-refresh">Обновить</button>
+                        </div>
+                    </div>
+                </div>
+                </section>
+
+                <section class="tasks-control-panel" aria-label="Панель управления списком задач">
+                    <div class="status-filter-bar">
+                        <a href="?source={{ source_filter|urlencode }}&assignee={{ assignee_filter|urlencode }}&priority={{ priority_filter|urlencode }}&client_id={{ client_filter|urlencode }}&q={{ search_query|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&stats_date_from={{ stats_date_from|urlencode }}&stats_date_to={{ stats_date_to|urlencode }}" class="btn {% if not status_filter %}active{% endif %}">Все</a>
+                        {% if user.is_director %}
+                        <a href="?status=awaiting&source={{ source_filter|urlencode }}&assignee={{ assignee_filter|urlencode }}&priority={{ priority_filter|urlencode }}&client_id={{ client_filter|urlencode }}&q={{ search_query|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&stats_date_from={{ stats_date_from|urlencode }}&stats_date_to={{ stats_date_to|urlencode }}" class="btn {% if status_filter == 'awaiting' %}active{% endif %}">Ожидают</a>
+                        {% endif %}
+                        <a href="?status=in_progress&source={{ source_filter|urlencode }}&assignee={{ assignee_filter|urlencode }}&priority={{ priority_filter|urlencode }}&client_id={{ client_filter|urlencode }}&q={{ search_query|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&stats_date_from={{ stats_date_from|urlencode }}&stats_date_to={{ stats_date_to|urlencode }}" class="btn {% if status_filter == 'in_progress' %}active{% endif %}">В работе</a>
+                        <a href="?status=postponed&source={{ source_filter|urlencode }}&assignee={{ assignee_filter|urlencode }}&priority={{ priority_filter|urlencode }}&client_id={{ client_filter|urlencode }}&q={{ search_query|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&stats_date_from={{ stats_date_from|urlencode }}&stats_date_to={{ stats_date_to|urlencode }}" class="btn {% if status_filter == 'postponed' %}active{% endif %}">Отложены</a>
+                        <a href="?status=done&source={{ source_filter|urlencode }}&assignee={{ assignee_filter|urlencode }}&priority={{ priority_filter|urlencode }}&client_id={{ client_filter|urlencode }}&q={{ search_query|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&stats_date_from={{ stats_date_from|urlencode }}&stats_date_to={{ stats_date_to|urlencode }}" class="btn {% if status_filter == 'done' %}active{% endif %}">Выполненные</a>
+                    </div>
+                                    <div class="task-control-divider" aria-hidden="true"></div>
+                                        <form class="task-filter-panel" method="get" action="">
+                        <input type="hidden" name="status" value="{{ status_filter }}">
+                        <input type="hidden" name="client_id" value="{{ client_filter }}">
+                        <input type="hidden" name="stats_date_from" value="{{ stats_date_from }}">
+                        <input type="hidden" name="stats_date_to" value="{{ stats_date_to }}">
+                        <div class="task-filter-field">
+                            <label for="task-filter-q">Поиск</label>
+                            <input id="task-filter-q" type="search" name="q" value="{{ search_query }}" placeholder="Поиск по задаче, клиенту, исполнителю...">
+                        </div>
+                        <div class="task-filter-field">
+                            <label for="task-filter-date-from">Создано от</label>
+                            <input id="task-filter-date-from" type="date" name="date_from" value="{{ date_from }}">
+                        </div>
+                        <div class="task-filter-field">
+                            <label for="task-filter-date-to">Создано до</label>
+                            <input id="task-filter-date-to" type="date" name="date_to" value="{{ date_to }}">
+                        </div>
+                        <div class="task-filter-field">
+                            <label for="task-filter-priority">Приоритет</label>
+                            <select id="task-filter-priority" name="priority">
+                                <option value="" {% if not priority_filter %}selected{% endif %}>Любой</option>
+                                <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>Высокий</option>
+                                <option value="medium" {% if priority_filter == 'medium' %}selected{% endif %}>Средний</option>
+                                <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Низкий</option>
+                            </select>
+                        </div>
+                        {% if user.is_director %}
+                        <div class="task-filter-field">
+                            <label for="task-filter-assignee">Исполнитель</label>
+                            <select id="task-filter-assignee" name="assignee">
+                                <option value="" {% if not assignee_filter %}selected{% endif %}>Все</option>
+                                {% for specialist in specialists %}
+                                <option value="{{ specialist.id }}" {% if assignee_filter == specialist.id|stringformat:'s' %}selected{% endif %}>{{ specialist.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        <div class="task-filter-field">
+                            <label for="task-filter-source">Источник</label>
+                            <select id="task-filter-source" name="source">
+                                <option value="" {% if not source_filter %}selected{% endif %}>Все</option>
+                                <option value="deal" {% if source_filter == 'deal' %}selected{% endif %}>Сделки</option>
+                                <option value="renewal" {% if source_filter == 'renewal' %}selected{% endif %}>Продление</option>
+                                <option value="order" {% if source_filter == 'order' %}selected{% endif %}>Заказы</option>
+                                <option value="manual" {% if source_filter == 'manual' %}selected{% endif %}>Вручную</option>
+                            </select>
+                        </div>
+                        <div class="task-filter-actions">
+                            <button class="btn btn-primary" type="submit">Применить</button>
+                            <a class="btn" href="?">Сбросить</a>
+                            <a class="btn btn-success" href="{% url 'bot_app:export_tasks_excel' %}?{{ request.GET.urlencode }}">Экспорт Excel</a>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="tasks-list-card" aria-label="Список задач">
+                    <div class="tasks-list-header">
+                        <h2 class="tasks-list-title">Список задач</h2>
+                        <p class="tasks-list-count">Показано: {{ tasks|length }}</p>
+                    </div>
+                    {% if tasks %}
+                    <div class="tasks-stream">
+                        {% for t in tasks %}
+                        <article class="task-row-card {% if t.is_overdue %}overdue-row task-accent-overdue{% elif t.status == 'in_progress' %}task-accent-progress{% elif t.status == 'postponed' %}task-accent-postponed{% elif t.status == 'done' %}task-accent-done{% elif t.priority == 'high' %}task-accent-high{% elif t.priority == 'medium' %}task-accent-medium{% else %}task-accent-low{% endif %}" onclick="openTaskDetail({{ t.id }})" onkeydown="if(event.key==='Enter' || event.key===' ' || event.code==='Space'){ event.preventDefault(); openTaskDetail({{ t.id }}); }" role="button" tabindex="0" aria-label="Открыть задачу #{{ t.id }}">
+                            <div class="task-row-head">
+                                <div class="task-row-left">
+                                    <span class="task-card-id">#{{ t.id }}</span>
+                                    {% if t.is_new_unread %}
+                                    <span class="badge badge-new">Новая</span>
+                                    {% endif %}
+                                    {% if t.is_overdue %}
+                                    <span class="badge badge-danger">Просрочена</span>
+                                    {% elif t.status == 'awaiting_assignment' %}
+                                    <span class="badge badge-info">Ожидает</span>
+                                    {% elif t.status == 'in_progress' %}
+                                    <span class="badge badge-warning">В работе</span>
+                                    {% elif t.status == 'postponed' %}
+                                    <span class="badge badge-postponed">Отложена</span>
+                                    {% elif t.status == 'done' %}
+                                    <span class="badge badge-success">Выполнена</span>
+                                    {% else %}
+                                    <span class="badge badge-secondary">{{ t.status }}</span>
+                                    {% endif %}
+
+                                    {% if t.priority == 'high' %}
+                                    <span class="badge badge-danger"><span class="priority-dot priority-high"></span>Высокий</span>
+                                    {% elif t.priority == 'medium' %}
+                                    <span class="badge badge-warning"><span class="priority-dot priority-medium"></span>Средний</span>
+                                    {% else %}
+                                    <span class="badge badge-secondary"><span class="priority-dot priority-low"></span>Низкий</span>
+                                    {% endif %}
+                                </div>
+                                <div class="task-row-deadline {% if t.is_overdue %}deadline-overdue{% endif %}">
+                                    Дедлайн: {% if t.deadline %}{{ t.deadline|ru_datetime }}{% else %}—{% endif %}
+                                </div>
+                            </div>
+                            <h3 class="task-card-title">{{ t.title }}</h3>
+                            {% if t.description %}
+                            <p class="task-card-description">{{ t.description }}</p>
+                            {% endif %}
+                            <div class="task-row-meta">
+                                <span class="task-meta-item">
+                                    <span class="task-meta-label">Источник</span>
+                                    {% if t.source_type == 'deal' %}
+                                    Сделка{% if t.source_id %} #{{ t.source_id }}{% endif %}
+                                    {% elif t.source_type == 'renewal' %}
+                                    Продление{% if t.source_id %} #{{ t.source_id }}{% endif %}
+                                    {% elif t.source_type == 'order' %}
+                                    Заказ{% if t.source_id %} #{{ t.source_id }}{% endif %}
+                                    {% else %}
+                                    Вручную
+                                    {% endif %}
+                                </span>
+                                <span class="task-meta-item">
+                                    <span class="task-meta-label">Клиент</span>
+                                    {% if t.meta.client_name %}
+                                    {{ t.meta.client_name }}
+                                    {% elif t.meta.linked_clients %}
+                                    Клиентов: {{ t.meta.linked_clients|length }}
+                                    {% else %}
+                                    —
+                                    {% endif %}
+                                </span>
+                                <span class="task-meta-item"><span class="task-meta-label">Исполнитель</span> {{ t.assignee_name|default:"-" }}</span>
+                                <span class="task-meta-item">
+                                    <span class="task-meta-label">Создана</span>
+                                    {% if status_filter == 'done' %}
+                                        {% if t.completed_at %}{{ t.completed_at|ru_datetime }}{% else %}—{% endif %}
+                                    {% else %}
+                                        {{ t.created_at|ru_datetime }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state" role="status" aria-live="polite">
+                        <div class="empty-state-icon" aria-hidden="true">◌</div>
+                        <h3>Задач пока нет</h3>
+                        <p>Не найдено задач по текущим фильтрам.</p>
+                        {% if user.is_director %}
+                        <p class="empty-state-hint">Используйте кнопку «Создать задачу», чтобы добавить первую задачу в список.</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </section>
+            </div>
+        </div>
+    </div>
+
+    {# ==================== МОДАЛКА: СОЗДАТЬ ЗАДАЧУ ==================== #}
+    {% if user.is_director %}
+    <div id="create-task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Новая задача</h3>
+                <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Заголовок *</label>
+                    <input type="text" id="task-title" placeholder="Название задачи">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="task-description" rows="3" placeholder="Описание задачи"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Клиенты по задаче (доступ специалисту)</label>
+                    <div class="client-picker" id="create-client-picker">
+                        <input type="text" class="client-picker-input" id="create-client-search" placeholder="Поиск по имени, телефону, ИНН..." autocomplete="off">
+                        <div class="client-dropdown" id="create-client-dropdown"></div>
+                    </div>
+                    <div class="selected-clients-list" id="create-selected-clients"></div>
+                    <div style="margin-top:0.35rem;color:#7f8c8d;font-size:0.8rem;">Введите минимум 2 символа для поиска. Можно выбрать нескольких клиентов.</div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Источник</label>
+                        <select id="task-source-type">
+                            <option value="manual">Вручную</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="source-id-group" style="display:none;">
+                        <label>ID источника</label>
+                        <input type="number" id="task-source-id" placeholder="ID">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Исполнитель</label>
+                        <select id="task-assignee">
+                            <option value="">-- Не назначен --</option>
+                            {% for s in specialists %}
+                            <option value="{{ s.id }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Приоритет</label>
+                        <select id="task-priority">
+                            <option value="low">Низкий</option>
+                            <option value="medium" selected>Средний</option>
+                            <option value="high">Высокий</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Дедлайн</label>
+                    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:200px;">
+                            <input type="datetime-local" id="task-deadline">
+                        </div>
+                        <span style="color:var(--color-text-muted);font-size:0.85rem;">или через</span>
+                        <div style="display:flex;align-items:center;gap:0.3rem;">
+                            <input type="number" id="task-deadline-hours" min="1" max="720" placeholder="ч" style="width:70px;padding:0.6rem;border:2px solid var(--color-border-light);border-radius:var(--radius-sm);font-size:0.9rem;">
+                            <span style="font-size:0.85rem;color:var(--color-text-muted);">часов</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeCreateModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="createTask()">Создать</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ==================== МОДАЛКА: ДЕТАЛИ ЗАДАЧИ ==================== #}
+    <div id="task-detail-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Задача #<span id="detail-task-id"></span></h3>
+                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="detail-body"></div>
+            <div class="modal-footer" id="detail-footer"></div>
+        </div>
+    </div>
+
+    <div id="task-postpone-modal" class="modal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h3>Отложить задачу</h3>
+                <button class="modal-close" onclick="closePostponeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="postpone-task-id">
+                <div class="form-group">
+                    <label>Дата и время напоминания</label>
+                    <input type="datetime-local" id="postpone-datetime">
+                </div>
+                <div class="form-group">
+                    <label>Комментарий (обязательно)</label>
+                    <textarea id="postpone-comment" rows="3" placeholder="Причина отложения..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closePostponeModal()">Отмена</button>
+                <button class="btn btn-primary" style="background:#8e44ad;border-color:#8e44ad;" onclick="submitPostpone()">Отложить</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="task-transfer-modal" class="modal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h3>Перенести задачу</h3>
+                <button class="modal-close" onclick="closeTransferModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="transfer-task-id">
+                <div class="form-group">
+                    <label>Новый статус</label>
+                    <select id="transfer-status">
+                        <option value="in_progress">В работе</option>
+                        <option value="done">Выполнена</option>
+                        <option value="postponed">Отложена</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Комментарий (обязательно)</label>
+                    <textarea id="transfer-comment" rows="3" placeholder="Причина переноса..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeTransferModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="submitTransfer()">Перенести</button>
+            </div>
+        </div>
+    </div>
+    <div id="task-card-verification-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Проверка карточек перед завершением</h3>
+                <button class="modal-close" onclick="closeCardVerificationModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="verification-task-id">
+                <div style="font-size:0.9rem;color:var(--color-text-muted);margin-bottom:0.8rem;">
+                    Перед закрытием задачи откройте связанные карточки клиентов/компаний и проверьте заполнение полей.
+                </div>
+                <div id="verification-linked-cards" class="verification-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeCardVerificationModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="confirmCardVerificationAndComplete()">Подтверждаю заполнение полей</button>
+            </div>
+        </div>
+    </div>
+
+    {# Toast #}
+    <div id="toast" style="display:none; position:fixed; bottom:2rem; right:2rem; padding:1rem 1.5rem; border-radius:8px; color:white; font-weight:500; z-index:2000;"></div>
+
+    {% include 'bot_app/_sidebar_scripts.html' %}
+    <script>
+    var IS_DIRECTOR = {{ user.is_director|yesno:"true,false" }};
+    var IS_TECH_SUPPORT = {{ user.is_tech_support|yesno:"true,false" }};
+    var CRM_CLIENT_URL_TEMPLATE = "{% url 'bot_app:crm_client_detail' 0 %}";
+    var TASK_UPDATE_URL_TEMPLATE = "{% url 'bot_app:api_task_update' 0 %}";
+    var TASK_DELETE_URL_TEMPLATE = "{% url 'bot_app:api_task_delete' 0 %}";
+    var TASK_STATS_URL = "{% url 'bot_app:api_tasks_stats' %}";
+    var URL_PARAMS = new URLSearchParams(window.location.search);
+    var TASK_PREFILL = {
+        open_create: URL_PARAMS.get('open_create') === '1',
+        title: URL_PARAMS.get('prefill_title') || '',
+        description: URL_PARAMS.get('prefill_description') || '',
+        source_type: URL_PARAMS.get('prefill_source_type') || 'manual',
+        source_id: URL_PARAMS.get('prefill_source_id') || '',
+        client_id: URL_PARAMS.get('prefill_client_id') || '',
+        client_ids: URL_PARAMS.get('prefill_client_ids') || ''
+    };
+    var PREFILL_CLIENTS = [
+        {% for c in prefill_clients %}
+        {id: {{ c.id }}, name: "{{ c.name|default_if_none:''|escapejs }}", inn: "{{ c.inn|default_if_none:''|escapejs }}", phone: "{{ c.phone|default_if_none:''|escapejs }}", email: "{{ c.email|default_if_none:''|escapejs }}"},
+        {% endfor %}
+    ];
+
+    var TASKS_DATA = {};
+    var PENDING_TRANSFER_COMPLETE = null;
+    {% for t in tasks %}
+    TASKS_DATA[{{ t.id }}] = {
+        id: {{ t.id }},
+        title: "{{ t.title|escapejs }}",
+        description: "{{ t.description|default_if_none:''|escapejs }}",
+        source_type: "{{ t.source_type|escapejs }}",
+        source_id: {{ t.source_id|default_if_none:'null' }},
+        created_by: {{ t.created_by }},
+        director_id: {{ t.director_id|default_if_none:'null' }},
+        assignee_id: {{ t.assignee_id|default_if_none:'null' }},
+        assigned_at: "{{ t.assigned_at|date:'Y-m-d\\TH:i'|default_if_none:'' }}",
+        completed_at: "{{ t.completed_at|date:'Y-m-d\\TH:i'|default_if_none:'' }}",
+        completed_at_display: "{{ t.completed_at|ru_datetime|default_if_none:'' }}",
+        deadline: "{{ t.deadline|date:'Y-m-d\\TH:i'|default_if_none:'' }}",
+        priority: "{{ t.priority|escapejs }}",
+        status: "{{ t.status|escapejs }}",
+        postponed_until: "{{ t.postponed_until|date:'Y-m-d\\TH:i'|default_if_none:'' }}",
+        result_comment: "{{ t.result_comment|default_if_none:''|escapejs }}",
+        creator_name: "{{ t.creator_name|default_if_none:'-'|escapejs }}",
+        assignee_name: "{{ t.assignee_name|default_if_none:'-'|escapejs }}",
+        is_overdue: {{ t.is_overdue|default_if_none:'0' }},
+        created_at: "{{ t.created_at|ru_datetime }}",
+        deadline_display: "{{ t.deadline|ru_datetime|default_if_none:'-' }}",
+        requires_card_verification_before_complete: {{ t.requires_card_verification_before_complete|yesno:"true,false" }},
+        meta: JSON.parse('{{ t.meta_js|escapejs }}')
+    };
+    {% endfor %}
+
+    var SPECIALISTS = [
+        {% for s in specialists %}
+        {id: {{ s.id }}, name: "{{ s.name|escapejs }}"},
+        {% endfor %}
+    ];
+
+
+    function formatDateRu(value) {
+        if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return value || '';
+        const [year, month, day] = value.split('-');
+        return `${day}.${month}.${year}`;
+    }
+    function updateTaskStatsPeriodDisplay(dateFromDisplay, dateToDisplay) {
+        var el = document.getElementById('task-stats-period-display');
+        if (!el) return;
+        el.textContent = (dateFromDisplay || '') + ' — ' + (dateToDisplay || '');
+    }
+    function updateTaskOverviewSummary(stats) {
+        setTaskStatValue('task-summary-total', stats.total);
+        setTaskStatValue('task-summary-awaiting', stats.awaiting);
+        setTaskStatValue('task-summary-in-progress', stats.in_progress);
+        setTaskStatValue('task-summary-postponed', stats.postponed);
+        setTaskStatValue('task-summary-done', stats.done);
+        setTaskStatValue('task-summary-overdue', stats.overdue);
+    }
+    function collectTaskStatsParams() {
+        var params = new URLSearchParams();
+        var urlParams = new URLSearchParams(window.location.search);
+        ['q', 'assignee', 'source', 'priority', 'client_id'].forEach(function(key) {
+            var value = urlParams.get(key) || '';
+            var field = document.querySelector('[name="' + key + '"]');
+            if (field && field.value !== undefined) value = field.value;
+            if (value) params.set(key, value);
+        });
+        var dateFrom = document.getElementById('task-stats-date-from');
+        var dateTo = document.getElementById('task-stats-date-to');
+        if (dateFrom && dateFrom.value) params.set('stats_date_from', dateFrom.value);
+        if (dateTo && dateTo.value) params.set('stats_date_to', dateTo.value);
+        return params;
+    }
+    function setTaskStatValue(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = value || 0;
+    }
+    function refreshTaskStats() {
+        var button = document.getElementById('task-stats-refresh');
+        var params = collectTaskStatsParams();
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Обновляем...';
+        }
+        fetch(TASK_STATS_URL + '?' + params.toString(), {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(function(resp) { return resp.json().then(function(data) { return {ok: resp.ok, data: data}; }); })
+            .then(function(result) {
+                if (!result.ok || !result.data.success) {
+                    throw new Error(result.data.error || 'Не удалось обновить статистику');
+                }
+                var stats = result.data.stats || {};
+                var period = result.data.period || {};
+                setTaskStatValue('task-stat-total', stats.total);
+                setTaskStatValue('task-stat-awaiting', stats.awaiting);
+                setTaskStatValue('task-stat-in-progress', stats.in_progress);
+                setTaskStatValue('task-stat-postponed', stats.postponed);
+                setTaskStatValue('task-stat-done', stats.done);
+                setTaskStatValue('task-stat-overdue', stats.overdue);
+                updateTaskOverviewSummary(stats);
+                var dateFrom = document.getElementById('task-stats-date-from');
+                var dateTo = document.getElementById('task-stats-date-to');
+                if (dateFrom && period.date_from) dateFrom.value = period.date_from;
+                if (dateTo && period.date_to) dateTo.value = period.date_to;
+                updateTaskStatsPeriodDisplay(
+                    period.date_from_display || formatDateRu(period.date_from),
+                    period.date_to_display || formatDateRu(period.date_to)
+                );
+                document.querySelectorAll('input[name="stats_date_from"]').forEach(function(input) { input.value = period.date_from || ''; });
+                document.querySelectorAll('input[name="stats_date_to"]').forEach(function(input) { input.value = period.date_to || ''; });
+                showToast('Статистика обновлена');
+            })
+            .catch(function(err) {
+                showToast(err.message || 'Ошибка обновления статистики', 'error');
+            })
+            .finally(function() {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'Обновить';
+                }
+            });
+    }
+
+    function getCsrfToken() {
+        var c = document.cookie.match(/csrftoken=([^;]+)/);
+        return c ? c[1] : '';
+    }
+    function showToast(msg, type) {
+        var t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.background = type === 'error' ? '#e74c3c' : '#27ae60';
+        t.style.display = 'block';
+        setTimeout(function() { t.style.display = 'none'; }, 3000);
+    }
+    function escapeHtml(text) {
+        if (!text) return '';
+        var d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+    function getTodayEOD() {
+        var d = new Date(); d.setHours(23, 59, 0, 0); return toLocalDatetime(d);
+    }
+    function toLocalDatetime(d) {
+        var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+        return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+    var taskStatsRefreshButton = document.getElementById('task-stats-refresh');
+    if (taskStatsRefreshButton) {
+        taskStatsRefreshButton.addEventListener('click', refreshTaskStats);
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        var commandCenter = document.querySelector('.tasks-command-center');
+        if (!commandCenter) return;
+        var toggle = commandCenter.querySelector('.tasks-overview-toggle');
+        var label = commandCenter.querySelector('.tasks-overview-toggle-label');
+        if (!toggle) return;
+        var storageKey = 'tasksOverviewCollapsed';
+
+        function setCollapsed(collapsed) {
+            commandCenter.classList.toggle('is-collapsed', collapsed);
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            if (label) label.textContent = collapsed ? 'Развернуть' : 'Свернуть';
+            try {
+                localStorage.setItem(storageKey, collapsed ? '1' : '0');
+            } catch (e) {}
+        }
+
+        var collapsed = true;
+        try {
+            var storedValue = localStorage.getItem(storageKey);
+            collapsed = storedValue === null ? true : storedValue === '1';
+        } catch (e) {}
+        setCollapsed(collapsed);
+
+        toggle.addEventListener('click', function() {
+            setCollapsed(!commandCenter.classList.contains('is-collapsed'));
+        });
+    });
+
+    function sanitizeTaskDescription(rawText) {
+        var text = (rawText || '').trim();
+        if (!text) return '';
+        var blockedPrefixes = ['клиент:', 'инн:', 'телефон:', 'источник:', 'сумма:', 'статус оплаты:', 'канал:', 'специалист:', 'автор сделки:'];
+        var cleanLines = text.split('\n').filter(function(line) {
+            var trimmed = line.trim().toLowerCase();
+            return !blockedPrefixes.some(function(prefix) { return trimmed.indexOf(prefix) === 0; });
+        });
+        return cleanLines.join('\n').trim();
+    }
+    function buildClientMetaLine(client) {
+        if (!client) return '';
+        var inn = (client.inn || '').trim();
+        var phone = (client.phone || '').trim();
+        if (inn) return 'ИНН: ' + inn;
+        if (phone) return 'Тел: ' + phone;
+        return 'Открыть полную карточку';
+    }
+    function buildClientCardUrl(clientId) {
+        var normalizedId = parseInt(clientId, 10);
+        if (!normalizedId || normalizedId <= 0) return '#';
+        return CRM_CLIENT_URL_TEMPLATE.replace(/\/0\/$/, '/' + normalizedId + '/');
+    }
+
+    /* ===== CLIENT PICKER ===== */
+    var _clientPickers = {};
+
+    function initClientPicker(searchId, dropdownId, tagsId, initialClients) {
+        var state = { selected: [], searchTimeout: null, highlightIdx: -1 };
+        _clientPickers[searchId] = state;
+        if (initialClients && initialClients.length) state.selected = initialClients.slice();
+        renderTags(tagsId, state);
+
+        var searchInput = document.getElementById(searchId);
+        var dropdown = document.getElementById(dropdownId);
+        if (!searchInput || !dropdown) return;
+
+        searchInput.addEventListener('input', function() {
+            var q = this.value.trim();
+            clearTimeout(state.searchTimeout);
+            if (q.length < 2) { dropdown.classList.remove('active'); dropdown.innerHTML = ''; return; }
+            state.highlightIdx = -1;
+            dropdown.innerHTML = '<div class="client-dropdown-loading">Поиск...</div>';
+            dropdown.classList.add('active');
+            state.searchTimeout = setTimeout(function() {
+                fetch("{% url 'bot_app:api_clients_search' %}?q=" + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        var clients = data.clients || [];
+                        var selIds = state.selected.map(function(c) { return c.id; });
+                        clients = clients.filter(function(c) { return selIds.indexOf(c.id) === -1; });
+                        if (!clients.length) { dropdown.innerHTML = '<div class="client-dropdown-empty">Ничего не найдено</div>'; return; }
+                        dropdown.innerHTML = '';
+                        clients.forEach(function(c) {
+                            var div = document.createElement('div');
+                            div.className = 'client-dropdown-item';
+                            var nameHtml = '<span class="client-name">' + escapeHtml(c.name || c.display) + '</span>';
+                            var parts = [];
+                            if (c.inn) parts.push('ИНН ' + escapeHtml(c.inn));
+                            if (c.phone) parts.push(escapeHtml(c.phone));
+                            var detailHtml = parts.length ? '<span class="client-detail">' + parts.join(' • ') + '</span>' : '';
+                            div.innerHTML = nameHtml + (detailHtml ? '<br>' + detailHtml : '');
+                            div.addEventListener('click', function() { addClientToPicker(state, c, tagsId, searchId); });
+                            dropdown.appendChild(div);
+                        });
+                    })
+                    .catch(function() { dropdown.innerHTML = '<div class="client-dropdown-empty">Ошибка поиска</div>'; });
+            }, 300);
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            var items = dropdown.querySelectorAll('.client-dropdown-item');
+            if (!items.length) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); state.highlightIdx = Math.min(state.highlightIdx + 1, items.length - 1); updateHighlight(items, state.highlightIdx); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); state.highlightIdx = Math.max(state.highlightIdx - 1, 0); updateHighlight(items, state.highlightIdx); }
+            else if (e.key === 'Enter' && state.highlightIdx >= 0) { e.preventDefault(); items[state.highlightIdx].click(); }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) { dropdown.classList.remove('active'); }
+        });
+        searchInput.addEventListener('focus', function() {
+            if (this.value.trim().length >= 2 && dropdown.children.length) dropdown.classList.add('active');
+        });
+    }
+
+    function updateHighlight(items, idx) {
+        items.forEach(function(el, i) { el.classList.toggle('highlighted', i === idx); });
+    }
+
+    function addClientToPicker(state, client, tagsId, searchId) {
+        if (state.selected.some(function(c) { return c.id === client.id; })) return;
+        state.selected.push({id: client.id, name: client.name || client.display, inn: client.inn || '', phone: client.phone || ''});
+        renderTags(tagsId, state);
+        var searchInput = document.getElementById(searchId);
+        if (searchInput) searchInput.value = '';
+        var dropdown = document.getElementById(searchId.replace('-search', '-dropdown'));
+        if (dropdown) { dropdown.classList.remove('active'); dropdown.innerHTML = ''; }
+    }
+
+    function removeClientFromPicker(state, clientId, tagsId) {
+        state.selected = state.selected.filter(function(c) { return c.id !== clientId; });
+        renderTags(tagsId, state);
+    }
+
+    function renderTags(tagsId, state) {
+        var container = document.getElementById(tagsId);
+        if (!container) return;
+        container.innerHTML = '';
+        state.selected.forEach(function(c) {
+            var tag = document.createElement('span');
+            tag.className = 'selected-client-tag';
+            var label = c.name || ('Клиент #' + c.id);
+            if (c.inn) label += ' (ИНН ' + c.inn + ')';
+            tag.innerHTML = escapeHtml(label) + ' <button class="remove-client-btn" type="button">&times;</button>';
+            tag.querySelector('.remove-client-btn').addEventListener('click', function(e) {
+                e.stopPropagation();
+                removeClientFromPicker(state, c.id, tagsId);
+            });
+            container.appendChild(tag);
+        });
+    }
+
+    function getSelectedClientIds(searchId) {
+        var state = _clientPickers[searchId];
+        if (!state) return [];
+        return state.selected.map(function(c) { return c.id; });
+    }
+
+    /* === CREATE === */
+    function openCreateModal() {
+        document.getElementById('task-title').value = TASK_PREFILL.title || '';
+        document.getElementById('task-description').value = TASK_PREFILL.description || '';
+        document.getElementById('task-source-type').value = 'manual';
+        document.getElementById('task-source-id').value = TASK_PREFILL.source_id || '';
+        document.getElementById('source-id-group').style.display = TASK_PREFILL.source_id ? 'block' : 'none';
+        document.getElementById('task-assignee').value = '';
+        document.getElementById('task-priority').value = 'medium';
+        document.getElementById('task-deadline').value = getTodayEOD();
+        document.getElementById('task-deadline-hours').value = '';
+        initClientPicker('create-client-search', 'create-client-dropdown', 'create-selected-clients', PREFILL_CLIENTS);
+        document.getElementById('create-task-modal').classList.add('active');
+        setTimeout(function() { var si = document.getElementById('create-client-search'); if (si) si.focus(); }, 100);
+    }
+    function closeCreateModal() {
+        document.getElementById('create-task-modal').classList.remove('active');
+    }
+
+    document.getElementById('task-source-type') && document.getElementById('task-source-type').addEventListener('change', function() {
+        document.getElementById('source-id-group').style.display = this.value !== 'manual' ? 'block' : 'none';
+    });
+
+    (function() {
+        var hoursEl = document.getElementById('task-deadline-hours');
+        var dtEl = document.getElementById('task-deadline');
+        if (hoursEl && dtEl) {
+            hoursEl.addEventListener('input', function() {
+                var h = parseInt(this.value);
+                if (h > 0) { var d = new Date(); d.setTime(d.getTime() + h * 3600000); dtEl.value = toLocalDatetime(d); }
+            });
+            dtEl.addEventListener('input', function() { hoursEl.value = ''; });
+        }
+    })();
+
+    function createTask() {
+        var title = document.getElementById('task-title').value.trim();
+        if (!title) { showToast('Введите заголовок', 'error'); return; }
+        var deadline = document.getElementById('task-deadline').value || null;
+        var linkedClientIds = getSelectedClientIds('create-client-search');
+        var body = {
+            title: title,
+            description: document.getElementById('task-description').value.trim(),
+            source_type: TASK_PREFILL.source_type || document.getElementById('task-source-type').value,
+            source_id: document.getElementById('task-source-id').value || null,
+            assignee_id: document.getElementById('task-assignee').value || null,
+            priority: document.getElementById('task-priority').value,
+            deadline: deadline,
+            from_event: TASK_PREFILL.open_create,
+            linked_client_ids: linkedClientIds
+        };
+        fetch("{% url 'bot_app:api_task_create' %}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify(body)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast('Задача поставлена');
+                closeCreateModal();
+                setTimeout(function() {
+                    if (TASK_PREFILL.open_create) {
+                        var url = new URL(window.location.href);
+                        url.searchParams.delete('open_create');
+                        url.searchParams.delete('prefill_title');
+                        url.searchParams.delete('prefill_description');
+                        url.searchParams.delete('prefill_source_type');
+                        url.searchParams.delete('prefill_source_id');
+                        url.searchParams.delete('prefill_client_id');
+                        url.searchParams.delete('prefill_client_ids');
+                        window.location.href = url.pathname + (url.search ? url.search : '') + url.hash;
+                        return;
+                    }
+                    location.reload();
+                }, 700);
+            }
+            else { showToast(data.error || 'Ошибка', 'error'); }
+        })
+        .catch(function() { showToast('Ошибка сети', 'error'); });
+    }
+
+    /* === DETAIL === */
+    function openTaskDetail(taskId) {
+        var t = TASKS_DATA[taskId];
+        if (!t) return;
+        document.getElementById('detail-task-id').textContent = t.id;
+        var body = document.getElementById('detail-body');
+
+        var sourceLabels = {deal: 'Сделки', renewal: 'Продление', order: 'Заказы', manual: 'Вручную'};
+        var statusLabels = {awaiting_assignment: 'Ожидают', in_progress: 'В работе', postponed: 'Отложена', done: 'Выполненные'};
+        var priorityLabels = {low: 'Низкий', medium: 'Средний', high: 'Высокий'};
+        var html = '';
+        var safeDescription = sanitizeTaskDescription(t.description);
+        var linkedClients = (t.meta && t.meta.linked_clients && Array.isArray(t.meta.linked_clients)) ? t.meta.linked_clients.slice() : [];
+        if (!linkedClients.length && t.meta && t.meta.client_id) {
+            linkedClients.push({
+                id: t.meta.client_id,
+                name: t.meta.client_name || ('Клиент #' + t.meta.client_id),
+                inn: t.meta.inn || '',
+                phone: t.meta.phone || '',
+                email: t.meta.email || '',
+                city: t.meta.city || '',
+                kpp: t.meta.kpp || '',
+                org_name: t.meta.org_name || ''
+            });
+        }
+        function buildClientCompactLink(client) {
+            var clientHref = buildClientCardUrl(client.id);
+            return '' +
+                '<a class="client-compact-item" href="' + clientHref + '" target="_blank" rel="noopener" onclick="event.stopPropagation();">' +
+                    '<span class="client-compact-icon">👤</span>' +
+                    '<span class="client-compact-main">' +
+                        '<span class="client-compact-name">' + escapeHtml(client.name || ('Клиент #' + client.id)) + '</span>' +
+                        '<span class="client-compact-meta">' + escapeHtml(buildClientMetaLine(client)) + '</span>' +
+                    '</span>' +
+                '</a>';
+        }
+
+        html += '<div class="detail-block"><div class="detail-block-title">Данные задачи</div>';
+        html += '<div class="task-detail-field"><div class="label">Заголовок</div><div class="value" style="font-weight:600;font-size:1.1rem;">' + escapeHtml(t.title) + '</div></div>';
+        if (safeDescription) {
+            html += '<div class="task-detail-field"><div class="label">Описание</div><div class="value" style="white-space:pre-wrap;">' + escapeHtml(safeDescription) + '</div></div>';
+        }
+        html += '<div class="detail-grid">';
+        html += '<div class="task-detail-field"><div class="label">Статус</div><div class="value">' + (statusLabels[t.status] || t.status) + (t.is_overdue ? ' <span style="color:var(--color-danger);font-weight:700;">(ПРОСРОЧЕНА)</span>' : '') + '</div></div>';
+        html += '<div class="task-detail-field"><div class="label">Приоритет</div><div class="value">' + (priorityLabels[t.priority] || t.priority) + '</div></div>';
+        html += '<div class="task-detail-field"><div class="label">Кто создал</div><div class="value">' + escapeHtml(t.creator_name) + '</div></div>';
+        html += '<div class="task-detail-field"><div class="label">Кто назначен</div><div class="value">' + escapeHtml(t.assignee_name) + '</div></div>';
+        html += '<div class="task-detail-field"><div class="label">Дедлайн</div><div class="value" style="' + (t.is_overdue ? 'color:var(--color-danger);font-weight:700;' : '') + '">' + (t.deadline_display || '-') + '</div></div>';
+        html += '<div class="task-detail-field"><div class="label">Источник</div><div class="value">' + (sourceLabels[t.source_type] || t.source_type) + '</div></div>';
+        html += '<div class="task-detail-field"><div class="label">Связанная сделка / заказ</div><div class="value">' + (t.source_id ? ('#' + t.source_id) : '-') + '</div></div>';
+        if (t.postponed_until) {
+            html += '<div class="task-detail-field"><div class="label">Напомнить в</div><div class="value" style="color:#7d3c98;font-weight:600;">' + escapeHtml(t.postponed_until.replace("T", " ")) + '</div></div>';
+        }
+        if (t.completed_at_display && t.status === 'done') {
+            html += '<div class="task-detail-field"><div class="label">Выполнена</div><div class="value" style="color:var(--color-success);font-weight:600;">' + escapeHtml(t.completed_at_display) + '</div></div>';
+        }
+        html += '</div></div>';
+
+        html += '<div class="detail-block"><div class="detail-block-title">Прикрепленные клиенты</div>';
+        if (linkedClients.length) {
+            html += '<div class="client-compact-list">';
+            linkedClients.forEach(function(client) {
+                html += buildClientCompactLink(client);
+            });
+            html += '</div>';
+            html += '<div class="client-compact-hint">Полные данные и редактирование доступны в карточке клиента по клику.</div>';
+        } else {
+            html += '<div class="client-empty">Клиент не привязан к задаче.</div>';
+            if (IS_DIRECTOR) {
+                html += '<div style="margin-top:0.6rem;font-size:0.85rem;color:var(--color-text-muted);">Доступно действие: привязать существующего клиента или добавить нового через блок редактирования ниже.</div>';
+            }
+        }
+        html += '</div>';
+
+        var activeChats = (t.meta && Array.isArray(t.meta.linked_chats)) ? t.meta.linked_chats : [];
+        var archiveChats = (t.meta && Array.isArray(t.meta.linked_chats_archive)) ? t.meta.linked_chats_archive : [];
+        if (activeChats.length || archiveChats.length) {
+            var statusMap = {pending: 'Ожидает', active: 'Активен', consultation: 'Консультация', closed: 'Закрыт'};
+            html += '<div class="detail-block"><div class="detail-block-title">Чаты клиента</div>';
+            if (activeChats.length) {
+                html += '<div style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:0.4rem;">Активные чаты по привязанным клиентам:</div>';
+                activeChats.forEach(function(chat) {
+                    var chatLink = IS_DIRECTOR
+                        ? ("{% url 'bot_app:crm_chats' %}?client_id=" + encodeURIComponent(chat.client_id))
+                        : ("/specialist/chat/" + encodeURIComponent(chat.id) + "/");
+                    html += '<div style="display:flex;justify-content:space-between;gap:0.6rem;align-items:center;padding:0.45rem 0;border-bottom:1px dashed var(--color-border-light);">';
+                    html += '<div style="font-size:0.88rem;">#' + chat.id + ' • ' + escapeHtml(statusMap[chat.status] || chat.status || '-') + (chat.updated_at ? ' • ' + escapeHtml(chat.updated_at) : '') + '</div>';
+                    html += '<a class="btn btn-sm btn-primary" href="' + chatLink + '">Открыть</a>';
+                    html += '</div>';
+                });
+            }
+            if (archiveChats.length) {
+                html += '<div style="font-size:0.85rem;color:var(--color-text-muted);margin:0.6rem 0 0.35rem;">Предыдущие чаты клиента:</div>';
+                archiveChats.slice(0, 5).forEach(function(chat) {
+                    var archiveLink = IS_DIRECTOR
+                        ? ("{% url 'bot_app:crm_chats' %}?client_id=" + encodeURIComponent(chat.client_id))
+                        : ("/specialist/chat/" + encodeURIComponent(chat.id) + "/");
+                    html += '<div style="display:flex;justify-content:space-between;gap:0.6rem;align-items:center;padding:0.35rem 0;">';
+                    html += '<div style="font-size:0.83rem;color:var(--color-text-muted);">#' + chat.id + ' • ' + escapeHtml(statusMap[chat.status] || chat.status || '-') + (chat.updated_at ? ' • ' + escapeHtml(chat.updated_at) : '') + '</div>';
+                    html += '<a class="btn btn-sm btn-secondary" href="' + archiveLink + '">Открыть</a>';
+                    html += '</div>';
+                });
+            }
+            html += '</div>';
+        }
+
+        html += '<div class="detail-block"><div class="detail-block-title">Действия по задаче и клиенту</div>';
+        html += '<div style="font-size:0.85rem;color:var(--color-text-muted);">Сохраните изменения задачи, при необходимости откройте карточку клиента для просмотра, редактирования и заполнения недостающих данных.</div>';
+        html += '</div>';
+        if (t.result_comment) {
+            html += '<div class="task-detail-field" style="margin-top:0.5rem;"><div class="label">Комментарий / результат</div><div class="value" style="white-space:pre-wrap;background:var(--color-card-hover);padding:0.75rem;border-radius:8px;">' + escapeHtml(t.result_comment) + '</div></div>';
+        }
+
+        html += '<hr style="border:none;border-top:1px solid var(--color-border-light);margin:1rem 0;">';
+
+        if (IS_DIRECTOR) {
+            html += '<div class="form-group"><label>Заголовок</label><input type="text" id="edit-title" value="' + escapeHtml(t.title || '') + '"></div>';
+            html += '<div class="form-group"><label>Описание</label><textarea id="edit-description" rows="3" placeholder="Описание задачи...">' + escapeHtml(t.description || '') + '</textarea></div>';
+            html += '<div class="form-row">';
+            html += '<div class="form-group"><label>Приоритет</label><select id="edit-priority">';
+            ['low','medium','high'].forEach(function(p) {
+                html += '<option value="' + p + '"' + (t.priority === p ? ' selected' : '') + '>' + (priorityLabels[p] || p) + '</option>';
+            });
+            html += '</select></div>';
+            html += '<div class="form-group"><label>Дедлайн</label><input type="datetime-local" id="edit-deadline" value="' + (t.deadline || '') + '"></div>';
+            html += '</div>';
+            html += '<div class="form-row">';
+            html += '<div class="form-group"><label>Исполнитель</label><select id="edit-assignee"><option value="">-- Не назначен --</option>';
+            SPECIALISTS.forEach(function(s) {
+                html += '<option value="' + s.id + '"' + (t.assignee_id === s.id ? ' selected' : '') + '>' + escapeHtml(s.name) + '</option>';
+            });
+            html += '</select><div style="margin-top:0.35rem;color:#7f8c8d;font-size:0.8rem;">Кнопка «Поставить задачу» направит задачу выбранному специалисту в работу.</div></div>';
+            html += '</div>';
+            html += '<div class="form-group"><label>Клиенты по задаче</label>';
+            html += '<div class="client-picker" id="edit-client-picker">';
+            html += '<input type="text" class="client-picker-input" id="edit-client-search" placeholder="Поиск по имени, телефону, ИНН..." autocomplete="off">';
+            html += '<div class="client-dropdown" id="edit-client-dropdown"></div>';
+            html += '</div>';
+            html += '<div class="selected-clients-list" id="edit-selected-clients"></div>';
+            html += '</div>';
+        } else {
+            // Специалист: только статус и комментарий
+            html += '<div class="form-group"><label>Статус</label><select id="edit-status">';
+            ['in_progress','postponed','done'].forEach(function(s) {
+                html += '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + (statusLabels[s] || s) + '</option>';
+            });
+            html += '</select></div>';
+        }
+        html += '<div class="form-group"><label>Комментарий / результат</label><textarea id="edit-comment" rows="3" placeholder="Добавьте комментарий...">' + escapeHtml(t.result_comment) + '</textarea></div>';
+
+        body.innerHTML = html;
+
+        // Init edit picker with existing clients
+        if (IS_DIRECTOR) {
+            var editInitial = linkedClients.map(function(c) {
+                return {id: c.id, name: c.name || ('Клиент #' + c.id), inn: c.inn || '', phone: c.phone || ''};
+            });
+            initClientPicker('edit-client-search', 'edit-client-dropdown', 'edit-selected-clients', editInitial);
+        }
+
+        var footer = document.getElementById('detail-footer');
+        var fhtml = '';
+        if (IS_DIRECTOR) {
+            fhtml += '<div class="modal-footer-actions">';
+            fhtml += '<button class="btn btn-danger" onclick="deleteTask(' + t.id + ')">Удалить</button>';
+            fhtml += '</div>';
+        }
+        fhtml += '<div class="modal-footer-actions modal-footer-actions-primary">';
+        fhtml += '<button class="btn btn-action-accent" onclick="openPostponeModal(' + t.id + ')">Отложить</button>';
+        fhtml += '<button class="btn btn-action-muted" onclick="openTransferModal(' + t.id + ')">Перенести</button>';
+        if (IS_DIRECTOR) {
+            fhtml += '<button class="btn btn-assign" onclick="assignTask(' + t.id + ')">Поставить задачу</button>';
+        }
+        fhtml += '<button class="btn btn-primary" onclick="saveTask(' + t.id + ')">Сохранить</button>';
+        fhtml += '</div>';
+        footer.innerHTML = fhtml;
+        document.getElementById('task-detail-modal').classList.add('active');
+    }
+
+    function closeDetailModal() {
+        document.getElementById('task-detail-modal').classList.remove('active');
+    }
+
+    function openPostponeModal(taskId) {
+        document.getElementById('postpone-task-id').value = taskId;
+        document.getElementById('postpone-datetime').value = toLocalDatetime(new Date(Date.now() + 3600000));
+        document.getElementById('postpone-comment').value = '';
+        document.getElementById('task-postpone-modal').classList.add('active');
+    }
+    function closePostponeModal() {
+        document.getElementById('task-postpone-modal').classList.remove('active');
+    }
+    function submitPostpone() {
+        var taskId = document.getElementById('postpone-task-id').value;
+        var dt = document.getElementById('postpone-datetime').value;
+        var comment = (document.getElementById('postpone-comment').value || '').trim();
+        if (!dt) { showToast('Укажите дату и время напоминания', 'error'); return; }
+        if (!comment) { showToast('Комментарий обязателен', 'error'); return; }
+        var updateUrl = TASK_UPDATE_URL_TEMPLATE.replace('/0/', '/' + taskId + '/');
+        fetch(updateUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({action: 'postpone', postpone_until: dt, transfer_comment: comment})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) { showToast('Задача отложена'); closePostponeModal(); closeDetailModal(); setTimeout(function() { location.reload(); }, 500); }
+            else { showToast(data.error || 'Ошибка', 'error'); }
+        })
+        .catch(function() { showToast('Ошибка сети', 'error'); });
+    }
+
+    function openTransferModal(taskId) {
+        var t = TASKS_DATA[taskId];
+        document.getElementById('transfer-task-id').value = taskId;
+        document.getElementById('transfer-status').value = (t && t.status) ? t.status : 'in_progress';
+        document.getElementById('transfer-comment').value = '';
+        document.getElementById('task-transfer-modal').classList.add('active');
+    }
+    function closeTransferModal() {
+        document.getElementById('task-transfer-modal').classList.remove('active');
+    }
+
+    function taskLinkedClients(task) {
+        if (!task || !task.meta) return [];
+        if (Array.isArray(task.meta.linked_clients) && task.meta.linked_clients.length) return task.meta.linked_clients.slice();
+        return [];
+    }
+    function openCardVerificationModal(taskId) {
+        var t = TASKS_DATA[taskId];
+        if (!t) return;
+        var linkedClients = taskLinkedClients(t);
+        if (!linkedClients.length) {
+            showToast('Нет привязанных карточек для проверки', 'error');
+            return;
+        }
+        document.getElementById('verification-task-id').value = taskId;
+        var container = document.getElementById('verification-linked-cards');
+        var html = '';
+        linkedClients.forEach(function(client) {
+            var clientUrl = buildClientCardUrl(client.id);
+            html += '<div class="verification-item">';
+            html += '<div><div class="verification-title">' + escapeHtml(client.name || ('Клиент #' + client.id)) + '</div>';
+            html += '<div class="verification-subtitle">' + escapeHtml(buildClientMetaLine(client)) + '</div></div>';
+            html += '<a class="btn btn-sm btn-primary" href="' + clientUrl + '" target="_blank" rel="noopener">Открыть карточку</a>';
+            html += '</div>';
+        });
+        container.innerHTML = html;
+        document.getElementById('task-card-verification-modal').classList.add('active');
+    }
+    function closeCardVerificationModal() {
+        PENDING_TRANSFER_COMPLETE = null;
+        document.getElementById('task-card-verification-modal').classList.remove('active');
+    }
+    function confirmCardVerificationAndComplete() {
+        var taskId = document.getElementById('verification-task-id').value;
+        if (!taskId) return;
+        if (PENDING_TRANSFER_COMPLETE && String(PENDING_TRANSFER_COMPLETE.taskId) === String(taskId)) {
+            executeTransfer(taskId, PENDING_TRANSFER_COMPLETE.status, PENDING_TRANSFER_COMPLETE.comment, true);
+            return;
+        }
+        saveTask(taskId, {forceComplete: true, cardsVerified: true});
+    }
+
+    function executeTransfer(taskId, status, comment, cardsVerified) {
+        var updateUrl = TASK_UPDATE_URL_TEMPLATE.replace('/0/', '/' + taskId + '/');
+        var payload = {action: 'transfer', status: status, transfer_comment: comment};
+        if (cardsVerified) payload.cards_verified = true;
+        fetch(updateUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify(payload)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast('Статус задачи обновлён');
+                PENDING_TRANSFER_COMPLETE = null;
+                closeCardVerificationModal();
+                closeTransferModal();
+                closeDetailModal();
+                setTimeout(function() { location.reload(); }, 500);
+                return;
+            }
+            if (data.requires_card_verification) {
+                PENDING_TRANSFER_COMPLETE = {taskId: taskId, status: status, comment: comment};
+                openCardVerificationModal(taskId);
+                return;
+            }
+            showToast(data.error || 'Ошибка', 'error');
+        })
+        .catch(function() { showToast('Ошибка сети', 'error'); });
+    }
+
+    function submitTransfer() {
+        var taskId = document.getElementById('transfer-task-id').value;
+        var status = document.getElementById('transfer-status').value;
+        var comment = (document.getElementById('transfer-comment').value || '').trim();
+        if (!comment) { showToast('Комментарий обязателен', 'error'); return; }
+        if (status === 'postponed') {
+            closeTransferModal();
+            openPostponeModal(taskId);
+            return;
+        }
+        var t = TASKS_DATA[taskId];
+        var requiresVerification = (
+            status === 'done'
+            && IS_TECH_SUPPORT
+            && t
+            && t.requires_card_verification_before_complete
+        );
+        if (requiresVerification) {
+            PENDING_TRANSFER_COMPLETE = {taskId: taskId, status: status, comment: comment};
+            openCardVerificationModal(taskId);
+            return;
+        }
+        executeTransfer(taskId, status, comment, false);
+    }
+
+    function saveTask(taskId, options) {
+        options = options || {};
+        var body = {};
+        var t = TASKS_DATA[taskId];
+        var commentEl = document.getElementById('edit-comment');
+        if (commentEl) body.result_comment = commentEl.value;
+        if (IS_DIRECTOR) {
+            var titleEl = document.getElementById('edit-title');
+            if (titleEl) body.title = titleEl.value.trim();
+            var descriptionEl = document.getElementById('edit-description');
+            if (descriptionEl) body.description = descriptionEl.value.trim();
+            var priorityEl = document.getElementById('edit-priority');
+            if (priorityEl) body.priority = priorityEl.value;
+            var assigneeEl = document.getElementById('edit-assignee');
+            if (assigneeEl) body.assignee_id = assigneeEl.value || null;
+            var deadlineEl = document.getElementById('edit-deadline');
+            if (deadlineEl) body.deadline = deadlineEl.value || null;
+            body.linked_client_ids = getSelectedClientIds('edit-client-search');
+        } else {
+            var statusEl = document.getElementById('edit-status');
+            if (statusEl) body.status = statusEl.value;
+            var requestedDone = (body.status === 'done') || options.forceComplete;
+            var requiresVerification = requestedDone && IS_TECH_SUPPORT && t && t.requires_card_verification_before_complete;
+            if (requiresVerification && !options.cardsVerified) {
+                openCardVerificationModal(taskId);
+                return;
+            }
+            if (options.cardsVerified) {
+                body.status = 'done';
+                body.cards_verified = true;
+            }
+        }
+        var updateUrl = TASK_UPDATE_URL_TEMPLATE.replace('/0/', '/' + taskId + '/');
+        fetch(updateUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify(body)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showToast('Задача обновлена');
+                closeCardVerificationModal();
+                closeDetailModal();
+                setTimeout(function() { location.reload(); }, 500);
+            } else {
+                if (data.requires_card_verification) {
+                    openCardVerificationModal(taskId);
+                    return;
+                }
+                showToast(data.error || 'Ошибка', 'error');
+            }
+        })
+        .catch(function() { showToast('Ошибка сети', 'error'); });
+    }
+
+    function assignTask(taskId) {
+        if (!IS_DIRECTOR) return;
+        var assigneeEl = document.getElementById('edit-assignee');
+        if (!assigneeEl || !assigneeEl.value) { showToast('Выберите специалиста перед постановкой задачи', 'error'); return; }
+        var body = {
+            action: 'assign',
+            assignee_id: assigneeEl.value,
+            linked_client_ids: getSelectedClientIds('edit-client-search')
+        };
+        var updateUrl = TASK_UPDATE_URL_TEMPLATE.replace('/0/', '/' + taskId + '/');
+        fetch(updateUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify(body)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) { showToast('Задача направлена специалисту'); closeDetailModal(); setTimeout(function() { location.reload(); }, 500); }
+            else { showToast(data.error || 'Ошибка', 'error'); }
+        })
+        .catch(function() { showToast('Ошибка сети', 'error'); });
+    }
+
+    function deleteTask(taskId) {
+        if (!confirm('Удалить задачу #' + taskId + '?')) return;
+        var deleteUrl = TASK_DELETE_URL_TEMPLATE.replace('/0/', '/' + taskId + '/');
+        fetch(deleteUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) { showToast('Задача удалена'); closeDetailModal(); setTimeout(function() { location.reload(); }, 500); }
+            else { showToast(data.error || 'Ошибка', 'error'); }
+        })
+        .catch(function() { showToast('Ошибка сети', 'error'); });
+    }
+
+    document.querySelectorAll('.modal').forEach(function(m) {
+        m.addEventListener('click', function(e) {
+            if (e.target === m) { m.classList.remove('active'); }
+        });
+    });
+
+    if (IS_DIRECTOR && TASK_PREFILL.open_create) {
+        openCreateModal();
+    }
+    </script>
+</body>
+</html>
