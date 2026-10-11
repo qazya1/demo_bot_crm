@@ -1,0 +1,1 @@
+ALTER TABLE support_chats ADD COLUMN source VARCHAR(32) DEFAULT "telegram";
