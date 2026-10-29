@@ -883,13 +883,3 @@ pytest alfabank_partner_api/tests/unit -q
 | Resilience | transactions, idempotency keys, locks, tenacity, reconciliation |
 | Security | CSRF, sessions, Bearer tokens, token TTL/rotation, cryptography |
 | Observability | structured logging, rotating files, bot events, health endpoint |
-
-## Автор
-
-**Широчин Артём Викторович**
-
-Проект демонстрирует проектирование и разработку сложной бизнес-системы: омниканальную идентичность, транзакционный backend, асинхронные боты, CRM, телефонию, платежи, финансовый ledger, внешний SDK и интеграции с несколькими API.
-
----
-
-Репозиторий находится в активной разработке. Этот README одновременно служит портфолио проекта и технической картой для дальнейшей работы команды.
